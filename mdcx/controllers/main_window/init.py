@@ -3,8 +3,8 @@ import webbrowser
 from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QAction, QMenu, QSystemTrayIcon, QTreeWidgetItem
+from PyQt5.QtGui import QIcon, QTextCursor, QTextOption
+from PyQt5.QtWidgets import QAction, QMenu, QPlainTextEdit, QSystemTrayIcon, QTreeWidgetItem
 
 from mdcx.config.extend import get_movie_path_setting
 from mdcx.config.resources import resources
@@ -105,6 +105,24 @@ def Init_Ui(self: "MyMAinWindow"):
     self.Ui.pushButton_scraper_failed_list.hide()
     self.Ui.pushButton_save_failed_list.hide()
     self.Ui.comboBox_custom_website.addItems(ManualConfig.SUPPORTED_WEBSITES)
+    # 强制 Cookie 输入框保持从左到右、左对齐显示，避免在部分环境出现“内容靠右/左侧空白”。
+    def configure_cookie_input(text_edit: QPlainTextEdit):
+        text_edit.setLayoutDirection(Qt.LeftToRight)
+        text_edit.setLineWrapMode(QPlainTextEdit.WidgetWidth)
+        text_edit.setWordWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+        text_edit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        text_option = text_edit.document().defaultTextOption()
+        text_option.setTextDirection(Qt.LeftToRight)
+        text_option.setAlignment(Qt.AlignLeft)
+        text_option.setWrapMode(QTextOption.WrapAtWordBoundaryOrAnywhere)
+        text_edit.document().setDefaultTextOption(text_option)
+
+    self.Ui.groupBox_10.setLayoutDirection(Qt.LeftToRight)
+    self.Ui.gridLayoutWidget_10.setLayoutDirection(Qt.LeftToRight)
+    self.Ui.gridLayout_10.setColumnStretch(0, 0)
+    self.Ui.gridLayout_10.setColumnStretch(1, 1)
+    for cookie_input in (self.Ui.plainTextEdit_cookie_javdb, self.Ui.plainTextEdit_cookie_javbus):
+        configure_cookie_input(cookie_input)
     # self.Ui.textBrowser_log_main.document().setMaximumBlockCount(100000)     # 限制日志页最大行数rowCount
     # self.Ui.textBrowser_log_main_2.document().setMaximumBlockCount(30000)     # 限制日志页最大行数rowCount
     self.Ui.textBrowser_log_main.viewport().installEventFilter(self)  # 注册事件用于识别点击控件时隐藏失败列表面板
@@ -253,8 +271,34 @@ def Init_Singal(self: "MyMAinWindow"):
     self.req_logs_clear.connect(self.Ui.textBrowser_log_main_2.clear)
     self.main_req_logs_show.connect(self.Ui.textBrowser_log_main_2.append)
     self.net_logs_show.connect(self.Ui.textBrowser_net_main.append)
-    self.set_javdb_cookie.connect(self.Ui.plainTextEdit_cookie_javdb.setPlainText)
-    self.set_javbus_cookie.connect(self.Ui.plainTextEdit_cookie_javbus.setPlainText)
+    def normalize_cookie_view(text_edit: QPlainTextEdit):
+        text_option = text_edit.document().defaultTextOption()
+        text_option.setTextDirection(Qt.LeftToRight)
+        text_option.setAlignment(Qt.AlignLeft)
+        text_edit.document().setDefaultTextOption(text_option)
+        cursor = text_edit.textCursor()
+        cursor.select(QTextCursor.Document)
+        block_format = cursor.blockFormat()
+        block_format.setAlignment(Qt.AlignLeft)
+        cursor.setBlockFormat(block_format)
+        cursor.clearSelection()
+        cursor.movePosition(QTextCursor.Start)
+        text_edit.setTextCursor(cursor)
+        text_edit.horizontalScrollBar().setValue(0)
+        text_edit.verticalScrollBar().setValue(0)
+
+    def set_cookie_text(text_edit: QPlainTextEdit, text: str):
+        text_edit.setPlainText(text)
+        normalize_cookie_view(text_edit)
+
+    self.set_javdb_cookie.connect(lambda text: set_cookie_text(self.Ui.plainTextEdit_cookie_javdb, text))
+    self.set_javbus_cookie.connect(lambda text: set_cookie_text(self.Ui.plainTextEdit_cookie_javbus, text))
+    self.Ui.plainTextEdit_cookie_javdb.textChanged.connect(
+        lambda: normalize_cookie_view(self.Ui.plainTextEdit_cookie_javdb)
+    )
+    self.Ui.plainTextEdit_cookie_javbus.textChanged.connect(
+        lambda: normalize_cookie_view(self.Ui.plainTextEdit_cookie_javbus)
+    )
     self.set_javbus_status.connect(self.Ui.label_javbus_cookie_result.setText)
     self.set_pic_pixmap.connect(self.resize_label_and_setpixmap)
     self.set_pic_text.connect(self.Ui.label_poster_size.setText)
