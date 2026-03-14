@@ -76,8 +76,10 @@ class MyMAinWindow(QMainWindow):
     main_req_logs_show = pyqtSignal(str)  # 显示刮削后台日志信号
     net_logs_show = pyqtSignal(str)  # 显示网络检测日志信号
     set_javdb_cookie = pyqtSignal(str)  # 加载javdb cookie文本内容到设置页面
+    set_javdb_status = pyqtSignal(str)  # javdb 检查状态更新
     set_javbus_cookie = pyqtSignal(str)  # 加载javbus cookie文本内容到设置页面
     set_javbus_status = pyqtSignal(str)  # javbus 检查状态更新
+    request_save_config = pyqtSignal()  # 请求在主线程保存配置
     set_label_file_path = pyqtSignal(str)  # 主界面更新路径信息显示
     set_pic_pixmap = pyqtSignal(list, list)  # 主界面显示封面、缩略图
     set_pic_text = pyqtSignal(str)  # 主界面显示封面信息
@@ -2155,24 +2157,27 @@ class MyMAinWindow(QMainWindow):
             self.Ui.label_javdb_cookie_result.setText("❌ 未填写 Cookie，影响 FC2 刮削！")
             self.show_log_text(" ❌ JavDb 未填写 Cookie，影响 FC2 刮削！可在「设置」-「网络」添加！")
             return
-        self.Ui.label_javdb_cookie_result.setText("⏳ 正在检测中...")
+        self.set_javdb_status.emit("⏳ 正在检测中...")
         try:
-            t = threading.Thread(target=self._check_javdb_cookie)
+            t = threading.Thread(target=self._check_javdb_cookie, args=(input_cookie, True))
             t.start()  # 启动线程,即让线程开始执行
         except Exception:
             signal_qt.show_traceback_log(traceback.format_exc())
             signal_qt.show_log_text(traceback.format_exc())
 
-    def _check_javdb_cookie(self):
+    def _check_javdb_cookie(self, input_cookie: str | None = None, apply_changes: bool = False):
         tips = "❌ 未填写 Cookie，影响 FC2 刮削！"
-        input_cookie = self.Ui.plainTextEdit_cookie_javdb.toPlainText()
+        input_cookie = input_cookie if input_cookie is not None else manager.config.javdb
         if not input_cookie:
-            self.Ui.label_javdb_cookie_result.setText(tips)
+            if apply_changes:
+                self.set_javdb_status.emit(tips)
             return tips
         # self.Ui.pushButton_check_javdb_cookie.setEnabled(False)
         tips = "✅ 连接正常！"
         header = {"cookie": input_cookie}
         javdb_url = manager.config.get_site_url(Website.JAVDB, "https://javdb.com") + "/v/D16Q5?locale=zh"
+        need_clear_cookie = False
+        need_save_cookie = False
         try:
             response, error = get_text_sync(javdb_url, headers=header)
             if response is None:
@@ -2181,8 +2186,7 @@ class MyMAinWindow(QMainWindow):
                         tips = "❌ Cookie 已过期！"
                     else:
                         tips = "❌ Cookie 已过期！已清理！(不清理无法访问)"
-                        self.set_javdb_cookie.emit("")
-                        self.pushButton_save_config_clicked()
+                        need_clear_cookie = True
                 else:
                     tips = f"❌ 连接失败！请检查网络或代理设置！ {response}"
             else:
@@ -2202,7 +2206,7 @@ class MyMAinWindow(QMainWindow):
                             vip_info = "已开通 VIP"
                         if manager.config.javdb != input_cookie:  # 保存cookie
                             tips = f"✅ 连接正常！（{vip_info}）Cookie 已保存！"
-                            self.pushButton_save_config_clicked()
+                            need_save_cookie = True
                         else:
                             tips = f"✅ 连接正常！（{vip_info}）"
                 else:
@@ -2210,34 +2214,37 @@ class MyMAinWindow(QMainWindow):
                         tips = "❌ Cookie 无效！请重新填写！"
                     else:
                         tips = "❌ Cookie 无效！已清理！"
-                        self.set_javdb_cookie.emit("")
-                        self.pushButton_save_config_clicked()
+                        need_clear_cookie = True
         except Exception as e:
             tips = f"❌ 连接失败！请检查网络或代理设置！ {e}"
             signal_qt.show_traceback_log(tips)
-        if input_cookie:
-            self.Ui.label_javdb_cookie_result.setText(tips)
-            # self.Ui.pushButton_check_javdb_cookie.setEnabled(True)
-        self.show_log_text(tips.replace("❌", " ❌ JavDb").replace("✅", " ✅ JavDb"))
+        if apply_changes:
+            if need_clear_cookie:
+                self.set_javdb_cookie.emit("")
+            if need_save_cookie or need_clear_cookie:
+                self.request_save_config.emit()
+            self.set_javdb_status.emit(tips)
+        signal_qt.show_log_text(tips.replace("❌", " ❌ JavDb").replace("✅", " ✅ JavDb"))
         return tips
 
     # javbus cookie
     def pushButton_check_javbus_cookie_clicked(self):
         try:
-            t = threading.Thread(target=self._check_javbus_cookie)
+            self.set_javbus_status.emit("⏳ 正在检测中...")
+            input_cookie = self.Ui.plainTextEdit_cookie_javbus.toPlainText()
+            t = threading.Thread(target=self._check_javbus_cookie, args=(input_cookie, True))
             t.start()  # 启动线程,即让线程开始执行
         except Exception:
             signal_qt.show_traceback_log(traceback.format_exc())
             self.show_log_text(traceback.format_exc())
 
-    def _check_javbus_cookie(self):
-        self.set_javbus_status.emit("⏳ 正在检测中...")
-
+    def _check_javbus_cookie(self, input_cookie: str | None = None, apply_changes: bool = False):
         # self.Ui.pushButton_check_javbus_cookie.setEnabled(False)
         tips = "✅ 连接正常！"
-        input_cookie = self.Ui.plainTextEdit_cookie_javbus.toPlainText()
+        input_cookie = input_cookie if input_cookie is not None else manager.config.javbus
         headers = {"Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7,ja;q=0.6", "cookie": input_cookie}
         javbus_url = manager.config.get_site_url(Website.JAVBUS, "https://javbus.com") + "/FSDSS-660"
+        need_save_cookie = False
 
         try:
             response, error = get_text_sync(javbus_url, headers=headers)
@@ -2250,14 +2257,17 @@ class MyMAinWindow(QMainWindow):
                 else:
                     tips = "❌ 当前节点需要 Cookie 才能刮削！请填写 Cookie 或更换节点！"
             elif manager.config.javbus != input_cookie:
-                self.pushButton_save_config_clicked()
+                need_save_cookie = True
                 tips = "✅ 连接正常！Cookie 已保存！  "
 
         except Exception as e:
             tips = f"❌ 连接失败！请检查网络或代理设置！ {e}"
 
-        self.show_log_text(tips.replace("❌", " ❌ JavBus").replace("✅", " ✅ JavBus"))
-        self.set_javbus_status.emit(tips)
+        if apply_changes and need_save_cookie:
+            self.request_save_config.emit()
+        signal_qt.show_log_text(tips.replace("❌", " ❌ JavBus").replace("✅", " ✅ JavBus"))
+        if apply_changes:
+            self.set_javbus_status.emit(tips)
         # self.Ui.pushButton_check_javbus_cookie.setEnabled(True)
         return tips
 

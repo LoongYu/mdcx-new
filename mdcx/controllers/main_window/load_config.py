@@ -66,6 +66,12 @@ def load_config(self: "MyMAinWindow"):
         "wanted": CrawlerResultFields.WANTED,
     }
 
+    # 若上次因异常切到了 _failed.json, 启动时优先尝试恢复到同目录 config.json
+    if manager.path.name == "_failed.json":
+        config_json_path = manager.data_folder / "config.json"
+        if config_json_path.is_file():
+            manager.path = config_json_path
+
     errors = manager.load()
     v1_msgs = [e for e in errors if e.startswith("[V1]")]
     if v1_msgs:
@@ -77,7 +83,9 @@ def load_config(self: "MyMAinWindow"):
             "为避免破坏配置文件, 已自动切换为 _failed.json\n"
             '这是非预期错误, 请提交 <a href="https://github.com/sqzw-x/mdcx/issues/new?template=bug_report_cn.yaml">GitHub Issue</a>\n'
         )
-        manager.path = manager.data_folder / "_failed.json"
+        # 仅在当前会话临时切换到 _failed.json, 不改写 MARK_FILE, 避免后续一直卡在 _failed.json
+        manager._path = manager.data_folder / "_failed.json"
+        manager.data_folder, manager.file = manager._path.parent, manager._path.name
         manager.reset()
     config_folder = manager.data_folder
     config_file = manager.file
