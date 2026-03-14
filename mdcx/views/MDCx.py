@@ -3633,12 +3633,9 @@ class Ui_MDCx(object):
         self.comboBox_website_all.setSizeIncrement(QtCore.QSize(0, 0))
         self.comboBox_website_all.setFocusPolicy(QtCore.Qt.NoFocus)
         self.comboBox_website_all.setStyleSheet("")
-        self.comboBox_website_all.setMaxVisibleItems(30)
+        self.comboBox_website_all.setMaxVisibleItems(27)
         self.comboBox_website_all.setFrame(False)
         self.comboBox_website_all.setObjectName("comboBox_website_all")
-        self.comboBox_website_all.addItem("")
-        self.comboBox_website_all.addItem("")
-        self.comboBox_website_all.addItem("")
         self.comboBox_website_all.addItem("")
         self.comboBox_website_all.addItem("")
         self.comboBox_website_all.addItem("")
@@ -10371,36 +10368,33 @@ class Ui_MDCx(object):
         self.radioButton_scrape_info.setText(_translate("MDCx", "字段优先"))
         self.label_28.setText(_translate("MDCx", "按番号类型设置的刮削网站进行刮削，字段来自单个网站。速度快一些。"))
         self.radioButton_scrape_speed.setText(_translate("MDCx", "速度优先"))
-        self.comboBox_website_all.setItemText(0, _translate("MDCx", "airav_cc"))
-        self.comboBox_website_all.setItemText(1, _translate("MDCx", "avsex"))
-        self.comboBox_website_all.setItemText(2, _translate("MDCx", "avsox"))
-        self.comboBox_website_all.setItemText(3, _translate("MDCx", "freejavbt"))
-        self.comboBox_website_all.setItemText(4, _translate("MDCx", "iqqtv"))
-        self.comboBox_website_all.setItemText(5, _translate("MDCx", "javdb"))
-        self.comboBox_website_all.setItemText(6, _translate("MDCx", "javbus"))
-        self.comboBox_website_all.setItemText(7, _translate("MDCx", "jav321"))
-        self.comboBox_website_all.setItemText(8, _translate("MDCx", "javlibrary"))
-        self.comboBox_website_all.setItemText(9, _translate("MDCx", "dmm"))
-        self.comboBox_website_all.setItemText(10, _translate("MDCx", "mgstage"))
-        self.comboBox_website_all.setItemText(11, _translate("MDCx", "getchu_dmm"))
-        self.comboBox_website_all.setItemText(12, _translate("MDCx", "getchu"))
-        self.comboBox_website_all.setItemText(13, _translate("MDCx", "hscangku"))
-        self.comboBox_website_all.setItemText(14, _translate("MDCx", "theporndb"))
-        self.comboBox_website_all.setItemText(15, _translate("MDCx", "kin8"))
-        self.comboBox_website_all.setItemText(16, _translate("MDCx", "xcity"))
-        self.comboBox_website_all.setItemText(17, _translate("MDCx", "7mmtv"))
-        self.comboBox_website_all.setItemText(18, _translate("MDCx", "mdtv"))
-        self.comboBox_website_all.setItemText(19, _translate("MDCx", "madouqu"))
-        self.comboBox_website_all.setItemText(20, _translate("MDCx", "cnmdb"))
-        self.comboBox_website_all.setItemText(21, _translate("MDCx", "lulubar"))
-        self.comboBox_website_all.setItemText(22, _translate("MDCx", "fc2"))
-        self.comboBox_website_all.setItemText(23, _translate("MDCx", "fc2hub"))
-        self.comboBox_website_all.setItemText(24, _translate("MDCx", "cableav"))
-        self.comboBox_website_all.setItemText(25, _translate("MDCx", "mywife"))
-        self.comboBox_website_all.setItemText(26, _translate("MDCx", "giga"))
-        self.comboBox_website_all.setItemText(27, _translate("MDCx", "fantastica"))
-        self.comboBox_website_all.setItemText(28, _translate("MDCx", "dahlia"))
-        self.comboBox_website_all.setItemText(29, _translate("MDCx", "javday"))
+        self.comboBox_website_all.setItemText(0, _translate("MDCx", "freejavbt"))
+        self.comboBox_website_all.setItemText(1, _translate("MDCx", "iqqtv"))
+        self.comboBox_website_all.setItemText(2, _translate("MDCx", "javdb"))
+        self.comboBox_website_all.setItemText(3, _translate("MDCx", "javbus"))
+        self.comboBox_website_all.setItemText(4, _translate("MDCx", "jav321"))
+        self.comboBox_website_all.setItemText(5, _translate("MDCx", "javlibrary"))
+        self.comboBox_website_all.setItemText(6, _translate("MDCx", "dmm"))
+        self.comboBox_website_all.setItemText(7, _translate("MDCx", "mgstage"))
+        self.comboBox_website_all.setItemText(8, _translate("MDCx", "getchu_dmm"))
+        self.comboBox_website_all.setItemText(9, _translate("MDCx", "getchu"))
+        self.comboBox_website_all.setItemText(10, _translate("MDCx", "hscangku"))
+        self.comboBox_website_all.setItemText(11, _translate("MDCx", "theporndb"))
+        self.comboBox_website_all.setItemText(12, _translate("MDCx", "kin8"))
+        self.comboBox_website_all.setItemText(13, _translate("MDCx", "xcity"))
+        self.comboBox_website_all.setItemText(14, _translate("MDCx", "7mmtv"))
+        self.comboBox_website_all.setItemText(15, _translate("MDCx", "mdtv"))
+        self.comboBox_website_all.setItemText(16, _translate("MDCx", "madouqu"))
+        self.comboBox_website_all.setItemText(17, _translate("MDCx", "cnmdb"))
+        self.comboBox_website_all.setItemText(18, _translate("MDCx", "lulubar"))
+        self.comboBox_website_all.setItemText(19, _translate("MDCx", "fc2"))
+        self.comboBox_website_all.setItemText(20, _translate("MDCx", "fc2hub"))
+        self.comboBox_website_all.setItemText(21, _translate("MDCx", "cableav"))
+        self.comboBox_website_all.setItemText(22, _translate("MDCx", "mywife"))
+        self.comboBox_website_all.setItemText(23, _translate("MDCx", "giga"))
+        self.comboBox_website_all.setItemText(24, _translate("MDCx", "fantastica"))
+        self.comboBox_website_all.setItemText(25, _translate("MDCx", "dahlia"))
+        self.comboBox_website_all.setItemText(26, _translate("MDCx", "javday"))
         self.label_315.setText(_translate("MDCx", "⚠️ 下载剧照、预告片，请选择「字段优先」或「指定网站」！「速度优先」信息不全！"))
         self.pushButton_scrape_note.setText(_translate("MDCx", "刮削不到？看这里！"))
         self.label_300.setText(_translate("MDCx", "⚠️ 注意！！！选择「字段优先」时，以下设置才有效！！！"))
@@ -11141,13 +11135,13 @@ class Ui_MDCx(object):
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\">3.2.无码</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
-"                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> Javdb、Javbus、Avsox:111111-1111、111111_111、HEYZO-1111、n1111</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
+"                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> Javdb、Javbus:111111-1111、111111_111、HEYZO-1111、n1111</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\">3.3.素人</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> Mgstage:259LUXU-1111</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> Javdb:LUXU-1111</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
-"                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> Fc2club:FC2-111111、FC2-PPV-111111、FC2PPV-111111</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
+"                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> FC2:FC2-111111、FC2-PPV-111111、FC2PPV-111111</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\">3.4.欧美</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
@@ -11228,7 +11222,7 @@ class Ui_MDCx(object):
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\">4.10.网站选择</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
-"                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> 可以使用所有网站，或者指定网站（avsox,javbus,dmm,javdb,fc2hub，mgstage）进行刮削。</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
+"                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> 可以使用所有网站，或者指定网站（javbus,dmm,javdb,fc2hub，mgstage）进行刮削。</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
 "                <p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Consolas,PingFang SC,Microsoft YaHei UI\';\"> 仅使用javdb进行刮削，尽量不要用，刮削30左右会被JAVDB封IP一段时间。</span><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"
 "                <p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-family:\'Microsoft YaHei UI\'; font-size:9pt;\"><br /> </span> </p>\n"

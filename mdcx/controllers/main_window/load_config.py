@@ -180,7 +180,10 @@ def load_config(self: "MyMAinWindow"):
         # region website
         AllItems = [self.Ui.comboBox_website_all.itemText(i) for i in range(self.Ui.comboBox_website_all.count())]
         # 指定单个刮削网站
-        self.Ui.comboBox_website_all.setCurrentIndex(AllItems.index(manager.config.website_single.value))
+        website_single_value = manager.config.website_single.value
+        if website_single_value not in AllItems:
+            website_single_value = Website.JAVDB.value
+        self.Ui.comboBox_website_all.setCurrentIndex(AllItems.index(website_single_value))
         # 有码番号刮削网站
         self.Ui.lineEdit_website_youma.setText(",".join([site.value for site in manager.config.website_youma]))
         # 无码番号刮削网站

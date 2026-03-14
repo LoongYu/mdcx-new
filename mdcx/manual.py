@@ -1,10 +1,14 @@
 from .config.enums import Website
 from .gen.field_enums import CrawlerResultFields
 
+_DISABLED_WEBSITES = {"airav_cc", "avsex", "avsox"}
+
 
 class ManualConfig:
+    # 已停用站点: 为了兼容旧配置仍保留枚举, 但默认不再提供这些站点入口。
+    DISABLED_WEBSITES = _DISABLED_WEBSITES
     # 支持的网站, 用于支持自定义域名
-    SUPPORTED_WEBSITES = [w.value for w in Website.__members__.values()]
+    SUPPORTED_WEBSITES = [w.value for w in Website.__members__.values() if w.value not in _DISABLED_WEBSITES]
     # 可配置来源的字段
     CONFIG_DATA_FIELDS = [
         "actor",
@@ -466,10 +470,6 @@ class ManualConfig:
         ".chs",
     ]
     WEB_DIC = {
-        "airav.io": Website.AIRAV_CC,
-        "9sex": Website.AVSEX,
-        "avsex": Website.AVSEX,
-        "avsox": Website.AVSOX,
         "dmm.co": Website.DMM,
         "fc2.com": Website.FC2,
         "fc2hub": Website.FC2HUB,

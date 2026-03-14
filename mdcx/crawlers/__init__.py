@@ -3,8 +3,6 @@ from collections.abc import Callable
 from ..config.models import Website
 from . import (
     airav_cc,
-    avsex,
-    avsox,
     cableav,
     cnmdb,
     dahlia,
@@ -42,8 +40,6 @@ from .javdb_new import JavdbCrawler
 CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.MMTV, mmtv.main),
     (Website.AIRAV_CC, airav_cc.main),  # lang
-    (Website.AVSEX, avsex.main),
-    (Website.AVSOX, avsox.main),
     (Website.CABLEAV, cableav.main),
     (Website.CNMDB, cnmdb.main),
     (Website.DAHLIA, dahlia.main),

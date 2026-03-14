@@ -131,7 +131,7 @@ def save_config(self: "MyMAinWindow"):
     try:
         manager.config.website_single = Website(website_single_text)
     except ValueError:
-        manager.config.website_single = Website.AIRAV_CC  # 默认值
+        manager.config.website_single = Website.JAVDB  # 默认值
 
     def get_sites(text: str) -> list[Website]:
         return [Website(site) for site in str_to_list(text, ",")]

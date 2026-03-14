@@ -123,8 +123,8 @@ class FileScraper:
         """
         short_number = task_input.short_number
 
-        # 259LUXU-1111， mgstage 和 avsex 之外使用 LUXU-1111（素人番号时，short_number有值，不带前缀数字；反之，short_number为空)
-        if short_number and website != "mgstage" and website != "avsex":
+        # 259LUXU-1111，mgstage 之外使用 LUXU-1111（素人番号时，short_number有值，不带前缀数字；反之，short_number为空）
+        if short_number and website != Website.MGSTAGE:
             task_input.number = short_number
 
         c = await self.crawler_provider.get(website)
@@ -268,10 +268,10 @@ class FileScraper:
         title_language = self.config.get_field_config(CrawlerResultFields.TITLE).language
         org_language = title_language
 
-        if website not in ["airav_cc", "iqqtv", "avsex", "javlibrary", "mdtv", "madouqu", "lulubar"]:
+        if website not in [Website.IQQTV, Website.JAVLIBRARY, Website.MDTV, Website.MADOUQU, Website.LULUBAR]:
             title_language = Language.JP
 
-        elif website == "mdtv":
+        elif website == Website.MDTV:
             title_language = Language.ZH_CN
 
         task_input.language = title_language

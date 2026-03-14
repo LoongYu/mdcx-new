@@ -285,13 +285,11 @@ class Config(BaseModel):
     # endregion
 
     # region: Website Settings
-    website_single: Website = Field(default=Website.AIRAV_CC, title="单个网站")  # todo 移除
+    website_single: Website = Field(default=Website.JAVDB, title="单个网站")
     website_youma: list[Website] = Field(
         default_factory=lambda: [
             Website.OFFICIAL,
             Website.IQQTV,
-            Website.AVSEX,
-            Website.AVSOX,
             Website.CABLEAV,
             Website.DMM,
             Website.FANTASTICA,
@@ -313,7 +311,6 @@ class Config(BaseModel):
             Website.JAVBUS,
             Website.FREEJAVBT,
             Website.JAV321,
-            Website.AVSOX,
             Website.MMTV,
             Website.HDOUBAN,
             Website.JAVDB,
@@ -323,7 +320,6 @@ class Config(BaseModel):
     website_suren: list[Website] = Field(
         default_factory=lambda: [
             Website.MGSTAGE,
-            Website.AVSEX,
             Website.JAV321,
             Website.FREEJAVBT,
             Website.MMTV,
@@ -340,7 +336,6 @@ class Config(BaseModel):
             Website.MMTV,
             Website.HDOUBAN,
             Website.JAVDB,
-            Website.AVSOX,
         ],
         title="FC2网站源",
     )
@@ -722,7 +717,8 @@ class Config(BaseModel):
     def parse_sites(sites: list | set | str) -> list[Website]:
         if isinstance(sites, str):
             sites = str_to_list(sites, ",")
-        return [Website(s) for s in sites if s in Website]
+        allowed_sites = set(ManualConfig.SUPPORTED_WEBSITES)
+        return [Website(s) for s in sites if s in allowed_sites]
 
     @staticmethod
     def _site_value(site: Any) -> str:
@@ -750,7 +746,7 @@ class Config(BaseModel):
         """
         处理字段变更.
         """
-        allowed_sites = {site.value for site in Website}
+        allowed_sites = {site.value for site in Website if site.value in ManualConfig.SUPPORTED_WEBSITES}
 
         # 兼容旧配置: 自动移除已废弃/不存在的网站, 避免配置验证失败
         for key in ("website_youma", "website_wuma", "website_suren", "website_fc2", "website_oumei", "website_guochan"):
@@ -759,7 +755,7 @@ class Config(BaseModel):
 
         if "website_single" in d:
             website_single = Config._site_value(d.get("website_single"))
-            d["website_single"] = website_single if website_single in allowed_sites else Website.AIRAV_CC.value
+            d["website_single"] = website_single if website_single in allowed_sites else Website.JAVDB.value
 
         if isinstance(site_configs := d.get("site_configs"), dict):
             cleaned_site_configs: dict[str, Any] = {}

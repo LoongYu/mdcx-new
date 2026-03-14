@@ -33,7 +33,7 @@ from mdcx.base.file import (
 )
 from mdcx.base.image import add_del_extrafanart_copy
 from mdcx.base.video import add_del_extras, add_del_theme_videos
-from mdcx.base.web import check_theporndb_api_token, check_version, get_avsox_domain, ping_host
+from mdcx.base.web import check_theporndb_api_token, check_version, ping_host
 from mdcx.base.web_sync import get_text_sync
 from mdcx.config.enums import NfoInclude, Switch, Website
 from mdcx.config.extend import deal_url, get_movie_path_setting
@@ -43,6 +43,7 @@ from mdcx.consts import GITHUB_ISSUES_NEW_URL, GITHUB_RELEASES_URL, IS_WINDOWS, 
 from mdcx.core.nfo import write_nfo
 from mdcx.core.scraper import again_search, get_remain_list, start_new_scrape
 from mdcx.image import get_pixmap
+from mdcx.manual import ManualConfig
 from mdcx.models.enums import FileMode
 from mdcx.models.flags import Flags
 from mdcx.models.log_buffer import LogBuffer
@@ -170,9 +171,9 @@ class MyMAinWindow(QMainWindow):
             "\n💡 说明：\n "
             "任意代理：javbus、jav321、javlibrary、mywife、giga、freejavbt、"
             "mdtv、madouqu、7mmtv、dahlia、theporndb、cnmdb、fantastica、kin8\n "
-            "非日本代理：javdb、airav-cc、avsex（日本代理会报错）\n "
+            "非日本代理：javdb\n "
             "日本代理：seesaawiki、mgstage\n "
-            "无需代理：avsex、hdouban、iqqtv、lulubar、fc2、fc2hub\n\n"
+            "无需代理：hdouban、iqqtv、lulubar、fc2、fc2hub\n\n"
             "▶️ 点击右上角 【开始检测】按钮以测试网络连通性。"
         )  # 检查网络界面显示提示信息
         signal_qt.add_log("🍯 你可以点击左下角的图标来 显示 / 隐藏 请求信息面板！")
@@ -1013,7 +1014,7 @@ class MyMAinWindow(QMainWindow):
             text, ok = QInputDialog.getText(
                 self,
                 "输入网址重新刮削",
-                f"文件名: {main_file_name}\n支持网站:airav_cc、avsex、avsox、dmm、getchu、fc2"
+                f"文件名: {main_file_name}\n支持网站:dmm、getchu、fc2"
                 f"、fc2hub、iqqtv、jav321、javbus、javdb、freejavbt、javlibrary、mdtv"
                 f"、madouqu、mgstage、7mmtv、xcity、mywife、giga、dahlia、fantastica"
                 f"、hdouban、lulubar、cnmdb、theporndb、kin8\n请输入番号对应的网址（不是网站首页地址！！！是番号页面地址！！！）:",
@@ -1628,9 +1629,6 @@ class MyMAinWindow(QMainWindow):
 <head/>
 <body>
   <p><span style=" font-weight:700;">所有可用网站:</span></p>
-  <li>airav_cc</li>
-  <li>avsex</li>
-  <li>avsox</li>
   <li>cableav</li>
   <li>cnmdb</li>
   <li>dmm</li>
@@ -1968,9 +1966,7 @@ class MyMAinWindow(QMainWindow):
 
             net_info = {
                 "github": ["https://raw.githubusercontent.com", ""],
-                "airav_cc": ["https://airav.io", ""],
                 "iqqtv": ["https://iqq5.xyz", ""],
-                "avsex": ["https://paycalling.com", ""],
                 "freejavbt": ["https://freejavbt.com", ""],
                 "javbus": ["https://www.javbus.com", ""],
                 "javdb": ["https://javdb.com", ""],
@@ -1980,7 +1976,6 @@ class MyMAinWindow(QMainWindow):
                 "mgstage": ["https://www.mgstage.com", ""],
                 "getchu": ["http://www.getchu.com", ""],
                 "theporndb": ["https://api.theporndb.net", ""],
-                "avsox": [executor.run(get_avsox_domain()), ""],
                 "xcity": ["https://xcity.jp", ""],
                 "7mmtv": ["https://7mmtv.sx", ""],
                 "mdtv": ["https://www.mdpjzip.xyz", ""],
@@ -2022,6 +2017,8 @@ class MyMAinWindow(QMainWindow):
             }
 
             for website in Website:
+                if website.value in ManualConfig.DISABLED_WEBSITES:
+                    continue
                 try:
                     r = manager.config.get_site_url(website)
                 except Exception as e:
@@ -2035,7 +2032,6 @@ class MyMAinWindow(QMainWindow):
 
             net_info["javdb"][0] += "/v/D16Q5?locale=zh"
             net_info["seesaawiki"][0] += "/av_neme/d/%C9%F1%A5%EF%A5%A4%A5%D5"
-            net_info["airav_cc"][0] += "/playon.aspx?hid=44733"
             net_info["javlibrary"][0] += "/cn/?v=javme2j2tu"
             net_info["kin8"][0] += "/moviepages/3681/index.html"
 
@@ -2061,7 +2057,7 @@ class MyMAinWindow(QMainWindow):
                         each[1] = "❌ 连接失败 (被 Cloudflare 5 秒盾拦截！)"
                     else:
                         each[1] = f"✅ 连接正常{ping_host(host_address)}"
-                elif name in ["avsex", "freejavbt", "airav_cc", "madouqu", "7mmtv"]:
+                elif name in ["freejavbt", "madouqu", "7mmtv"]:
                     html_info, error = get_text_sync(each[0])
                     if html_info is None:
                         each[1] = "❌ 连接失败 请检查网络或代理设置！ " + error
