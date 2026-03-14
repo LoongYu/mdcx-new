@@ -26,9 +26,6 @@ jobs:
 
           # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
 
-          items+=('{"build": "macos", "os": "macos-latest", "arch": "aarch64"}')
-          items+=('{"build": "macos", "os": "macos-13", "arch": "x86_64"}')
-
           items+=('{"build": "windows", "os": "windows-latest", "arch": "x86_64"}')
 
           # 合并items到json数组
@@ -58,7 +55,7 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@v5
         with:
-          python-version-file: "pyproject.toml"
+          python-version: "3.13"
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
