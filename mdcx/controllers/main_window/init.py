@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QAction, QMenu, QSystemTrayIcon, QTreeWidgetItem
+from PyQt5.QtWidgets import QAction, QMenu, QPlainTextEdit, QSizePolicy, QSystemTrayIcon, QTreeWidgetItem
 
 from mdcx.config.extend import get_movie_path_setting
 from mdcx.config.resources import resources
@@ -105,13 +105,18 @@ def Init_Ui(self: "MyMAinWindow"):
     self.Ui.pushButton_scraper_failed_list.hide()
     self.Ui.pushButton_save_failed_list.hide()
     self.Ui.comboBox_custom_website.addItems(ManualConfig.SUPPORTED_WEBSITES)
-    # Cookie 输入框固定宽度并居中，避免在当前布局中偏左显示
+    # Cookie 输入框自适应拉伸并保持可见，避免右侧被截断
+    self.Ui.gridLayout_10.setColumnStretch(0, 0)
+    self.Ui.gridLayout_10.setColumnStretch(1, 1)
     for cookie_input in (self.Ui.plainTextEdit_cookie_javdb, self.Ui.plainTextEdit_cookie_javbus):
-        cookie_input.setMinimumWidth(420)
-        cookie_input.setMaximumWidth(520)
+        cookie_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        cookie_input.setMinimumWidth(360)
+        cookie_input.setMaximumWidth(16777215)
         cookie_input.setMinimumHeight(80)
-        cookie_input.setMaximumHeight(80)
-        self.Ui.gridLayout_10.setAlignment(cookie_input, Qt.AlignHCenter | Qt.AlignVCenter)
+        cookie_input.setMaximumHeight(120)
+        cookie_input.setLineWrapMode(QPlainTextEdit.WidgetWidth)
+        cookie_input.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.Ui.gridLayout_10.setAlignment(cookie_input, Qt.AlignVCenter)
     # self.Ui.textBrowser_log_main.document().setMaximumBlockCount(100000)     # 限制日志页最大行数rowCount
     # self.Ui.textBrowser_log_main_2.document().setMaximumBlockCount(30000)     # 限制日志页最大行数rowCount
     self.Ui.textBrowser_log_main.viewport().installEventFilter(self)  # 注册事件用于识别点击控件时隐藏失败列表面板

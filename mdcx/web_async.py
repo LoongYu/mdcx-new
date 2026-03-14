@@ -280,11 +280,21 @@ class AsyncWebClient:
             self.log_fn(f"🔴 获取文件大小失败: {url} {error}")
             return None
         if response.status_code < 400:
-            try:
-                return int(response.headers.get("Content-Length"))
-            except (ValueError, TypeError):
-                self.log_fn(f"🔴 获取文件大小失败: {url} Content-Length 解析错误")
-                return None
+            # 部分站点不返回标准 Content-Length；此处尽量解析，失败则降级为普通下载（不记错误）
+            content_length = response.headers.get("Content-Length")
+            if content_length:
+                content_length = content_length.strip().replace(",", "")
+                try:
+                    return int(content_length)
+                except (ValueError, TypeError):
+                    pass
+
+            content_range = response.headers.get("Content-Range")
+            if content_range and "/" in content_range:
+                total_size = content_range.rsplit("/", 1)[-1].strip()
+                if total_size.isdigit():
+                    return int(total_size)
+            return None
         self.log_fn(f"🔴 获取文件大小失败: {url} HTTP {response.status_code}")
         return None
 
