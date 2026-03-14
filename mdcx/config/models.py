@@ -725,10 +725,62 @@ class Config(BaseModel):
         return [Website(s) for s in sites if s in Website]
 
     @staticmethod
+    def _site_value(site: Any) -> str:
+        aliases = {
+            "airav": Website.AIRAV_CC.value,
+        }
+        if isinstance(site, Website):
+            value = site.value
+        else:
+            value = str(site).strip()
+        return aliases.get(value, value)
+
+    @staticmethod
+    def _filter_sites(sites: Any, allowed: set[str]) -> list[str]:
+        if isinstance(sites, str):
+            items = str_to_list(sites, ",")
+        elif isinstance(sites, (list, set, tuple)):
+            items = list(sites)
+        else:
+            return []
+        return [v for s in items if (v := Config._site_value(s)) in allowed]
+
+    @staticmethod
     def update(d: dict[str, Any]) -> list[str]:
         """
         处理字段变更.
         """
+        allowed_sites = {site.value for site in Website}
+
+        # 兼容旧配置: 自动移除已废弃/不存在的网站, 避免配置验证失败
+        for key in ("website_youma", "website_wuma", "website_suren", "website_fc2", "website_oumei", "website_guochan"):
+            if key in d:
+                d[key] = Config._filter_sites(d.get(key), allowed_sites)
+
+        if "website_single" in d:
+            website_single = Config._site_value(d.get("website_single"))
+            d["website_single"] = website_single if website_single in allowed_sites else Website.AIRAV_CC.value
+
+        if isinstance(site_configs := d.get("site_configs"), dict):
+            cleaned_site_configs: dict[str, Any] = {}
+            for site, conf in site_configs.items():
+                site_value = Config._site_value(site)
+                if site_value in allowed_sites:
+                    cleaned_site_configs[site_value] = conf
+            d["site_configs"] = cleaned_site_configs
+
+        if isinstance(field_configs := d.get("field_configs"), dict):
+            for _, field_conf in field_configs.items():
+                if isinstance(field_conf, dict):
+                    if "site_prority" in field_conf:
+                        field_conf["site_prority"] = Config._filter_sites(field_conf.get("site_prority"), allowed_sites)
+                elif isinstance(field_conf, FieldConfig):
+                    field_conf.site_prority = [
+                        site
+                        for site in field_conf.site_prority
+                        if Config._site_value(site) in allowed_sites
+                    ]
+
         if "proxy_type" in d:
             d["use_proxy"] = d["proxy_type"] != "no"
         if isinstance(r := d.get("proxy"), str):
@@ -743,8 +795,8 @@ class Config(BaseModel):
             d["local_library"] = str_to_list(r, ",")
         if "site_configs" not in d:
             d["site_configs"] = {Website.DMM: SiteConfig(use_browser=True)}
-        elif Website.DMM not in d["site_configs"]:
-            d["site_configs"][Website.DMM] = SiteConfig(use_browser=True)
+        elif Website.DMM not in d["site_configs"] and Website.DMM.value not in d["site_configs"]:
+            d["site_configs"][Website.DMM.value] = SiteConfig(use_browser=True)
 
         # 处理旧版字段设置
         if "field_configs" not in d:

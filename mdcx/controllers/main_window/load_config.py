@@ -78,7 +78,7 @@ def load_config(self: "MyMAinWindow"):
             '这是非预期错误, 请提交 <a href="https://github.com/sqzw-x/mdcx/issues/new?template=bug_report_cn.yaml">GitHub Issue</a>\n'
         )
         manager.path = manager.data_folder / "_failed.json"
-        return
+        manager.reset()
     config_folder = manager.data_folder
     config_file = manager.file
     config_path = manager.path
