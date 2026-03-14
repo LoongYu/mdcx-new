@@ -119,8 +119,20 @@ def Init_Ui(self: "MyMAinWindow"):
 
     self.Ui.groupBox_10.setLayoutDirection(Qt.LeftToRight)
     self.Ui.gridLayoutWidget_10.setLayoutDirection(Qt.LeftToRight)
+    # 修正 Cookie 标签文本中的缩进空格导致的列宽被异常撑大问题。
+    self.Ui.label_45.setText("javdb:\n(登录状态)")
+    self.Ui.label_425.setText("javbus:\n(登录状态)")
+    for left_label in (self.Ui.label_45, self.Ui.label_425):
+        left_label.setLayoutDirection(Qt.LeftToRight)
+        left_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        left_label.setFixedWidth(96)
+    for state_label in (self.Ui.label_javdb_cookie_result, self.Ui.label_javbus_cookie_result):
+        state_label.setLayoutDirection(Qt.LeftToRight)
+        state_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+    self.Ui.gridLayout_10.setColumnMinimumWidth(0, 96)
     self.Ui.gridLayout_10.setColumnStretch(0, 0)
     self.Ui.gridLayout_10.setColumnStretch(1, 1)
+    self.Ui.gridLayout_10.setHorizontalSpacing(12)
     for cookie_input in (self.Ui.plainTextEdit_cookie_javdb, self.Ui.plainTextEdit_cookie_javbus):
         configure_cookie_input(cookie_input)
     # self.Ui.textBrowser_log_main.document().setMaximumBlockCount(100000)     # 限制日志页最大行数rowCount

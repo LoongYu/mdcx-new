@@ -2022,9 +2022,16 @@ class MyMAinWindow(QMainWindow):
             }
 
             for website in Website:
-                if r := manager.config.get_site_url(website):
-                    signal_qt.show_net_info(f"   ⚠️{website} 使用自定义网址：{r}")
-                    net_info[website.value][0] = r
+                try:
+                    r = manager.config.get_site_url(website)
+                except Exception as e:
+                    signal_qt.show_net_info(f"   ⚠️{website.value} 读取自定义网址失败: {e}")
+                    continue
+                if not r:
+                    continue
+                signal_qt.show_net_info(f"   ⚠️{website} 使用自定义网址：{r}")
+                # 站点枚举可能比默认检测列表更新, 这里动态补充避免 KeyError 直接中断检测。
+                net_info.setdefault(website.value, [r, ""])[0] = r
 
             net_info["javdb"][0] += "/v/D16Q5?locale=zh"
             net_info["seesaawiki"][0] += "/av_neme/d/%C9%F1%A5%EF%A5%A4%A5%D5"
@@ -2097,6 +2104,7 @@ class MyMAinWindow(QMainWindow):
                 )
             else:
                 signal_qt.show_net_info("\n⛔️ 网络检测出现异常！")
+                signal_qt.show_net_info(f"   错误信息: {e}")
                 signal_qt.show_net_info(
                     "================================================================================\n"
                 )
