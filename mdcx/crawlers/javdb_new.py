@@ -175,23 +175,22 @@ class JavdbCrawler(BaseCrawler):
         info_list = []
         for each in res_list:
             href = extract_text(each, "@href")
-            title = extract_text(each, "div[@class='video-title']/strong/text()")
-            meta = extract_text(each, "div[@class='meta']/text()")
+            number_in_list = extract_text(each, "div[@class='video-title']/strong/text()")
 
-            if href:
-                info_list.append([href, title, meta])
+            if href and number_in_list:
+                info_list.append([href, number_in_list])
 
         # 精确匹配
-        number = ctx.input.number
-        for href, title, meta in info_list:
-            if number.upper() in title.upper():
+        number = ctx.input.number.upper()
+        for href, number_in_list in info_list:
+            if number == number_in_list.upper():
                 return [urljoin(self.base_url, href)]
 
-        # 模糊匹配
-        clean_number = number.upper().replace(".", "").replace("-", "").replace(" ", "")
-        for href, title, meta in info_list:
-            clean_content = (title + meta).upper().replace("-", "").replace(".", "").replace(" ", "")
-            if clean_number in clean_content:
+        # 模糊匹配（去掉特殊字符）
+        clean_number = number.replace(".", "").replace("-", "").replace(" ", "")
+        for href, number_in_list in info_list:
+            clean_number_in_list = number_in_list.upper().replace(".", "").replace("-", "").replace(" ", "")
+            if clean_number == clean_number_in_list:
                 return [urljoin(self.base_url, href)]
 
         return None

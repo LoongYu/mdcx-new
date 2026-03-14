@@ -154,7 +154,7 @@ async def main(
     if not re.match(r"n\d{4}", number):
         number = number.upper()
     real_url = appoint_url or ""
-    iqqtv_url = manager.config.get_site_url(Website.IQQTV, "https://iqq5.xyz")
+    iqqtv_url = manager.config.get_site_url(Website.IQQTV, "https://iqqtv.net")
     cover_url = ""
     image_cut = "right"
     image_download = False
