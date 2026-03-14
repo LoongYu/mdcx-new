@@ -293,12 +293,6 @@ def Init_Singal(self: "MyMAinWindow"):
 
     self.set_javdb_cookie.connect(lambda text: set_cookie_text(self.Ui.plainTextEdit_cookie_javdb, text))
     self.set_javbus_cookie.connect(lambda text: set_cookie_text(self.Ui.plainTextEdit_cookie_javbus, text))
-    self.Ui.plainTextEdit_cookie_javdb.textChanged.connect(
-        lambda: normalize_cookie_view(self.Ui.plainTextEdit_cookie_javdb)
-    )
-    self.Ui.plainTextEdit_cookie_javbus.textChanged.connect(
-        lambda: normalize_cookie_view(self.Ui.plainTextEdit_cookie_javbus)
-    )
     self.set_javbus_status.connect(self.Ui.label_javbus_cookie_result.setText)
     self.set_pic_pixmap.connect(self.resize_label_and_setpixmap)
     self.set_pic_text.connect(self.Ui.label_poster_size.setText)
