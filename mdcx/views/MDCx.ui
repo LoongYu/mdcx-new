@@ -20132,7 +20132,7 @@
                             </property>
                             <property name="minimumSize">
                               <size>
-                                <width>400</width>
+                                <width>300</width>
                                 <height>80</height>
                               </size>
                             </property>
@@ -20218,7 +20218,7 @@
                           <widget class="QPlainTextEdit" name="plainTextEdit_cookie_javbus">
                             <property name="minimumSize">
                               <size>
-                                <width>400</width>
+                                <width>300</width>
                                 <height>80</height>
                               </size>
                             </property>
@@ -20232,10 +20232,6 @@
                             </property>
                             <property name="placeholderText">
                               <string>美国节点需要填写，其他节点一般不需要填写，除非提示需要填写。</string>
-                            </property>
-                            <property name="text" stdset="0">
-                              <string>javdb：
-                                （登录状态）</string>
                             </property>
                           </widget>
                         </item>

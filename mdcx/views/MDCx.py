@@ -8598,7 +8598,7 @@ class Ui_MDCx(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.plainTextEdit_cookie_javdb.sizePolicy().hasHeightForWidth())
         self.plainTextEdit_cookie_javdb.setSizePolicy(sizePolicy)
-        self.plainTextEdit_cookie_javdb.setMinimumSize(QtCore.QSize(400, 80))
+        self.plainTextEdit_cookie_javdb.setMinimumSize(QtCore.QSize(300, 80))
         self.plainTextEdit_cookie_javdb.setStyleSheet(" border: 1px solid rgba(0,0,0, 50);\n"
 "                                border-radius: 1px;\n"
 "                                font: \"Courier\";")
@@ -8639,7 +8639,7 @@ class Ui_MDCx(object):
         self.label_425.setObjectName("label_425")
         self.gridLayout_10.addWidget(self.label_425, 2, 0, 1, 1)
         self.plainTextEdit_cookie_javbus = QtWidgets.QPlainTextEdit(self.gridLayoutWidget_10)
-        self.plainTextEdit_cookie_javbus.setMinimumSize(QtCore.QSize(400, 80))
+        self.plainTextEdit_cookie_javbus.setMinimumSize(QtCore.QSize(300, 80))
         self.plainTextEdit_cookie_javbus.setAccessibleDescription("")
         self.plainTextEdit_cookie_javbus.setStyleSheet(" border: 1px solid rgba(0,0,0, 50);\n"
 "                                border-radius: 1px;\n"
@@ -10987,8 +10987,6 @@ class Ui_MDCx(object):
         self.label_425.setText(_translate("MDCx", "javbus：\n"
 "                                （登录状态）"))
         self.plainTextEdit_cookie_javbus.setPlaceholderText(_translate("MDCx", "美国节点需要填写，其他节点一般不需要填写，除非提示需要填写。"))
-        self.plainTextEdit_cookie_javbus.setProperty("text", _translate("MDCx", "javdb：\n"
-"                                （登录状态）"))
         self.pushButton_check_javbus_cookie.setText(_translate("MDCx", "检查cookie"))
         self.label_75.setText(_translate("MDCx", "<p style=\'line-height:20px\'>Cookie 获取方法：<br>\n"
 "                          1，使用 Chrome 打开目标网站并登录，在页面空白位置点击鼠标右键，选择 「检查」 ；<br>\n"
