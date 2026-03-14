@@ -129,10 +129,21 @@ jobs:
 
             - name: Get changelog
               id: get-changelog
-              if: ${{ matrix.build == 'macos' }}
               run: |
                   echo 'CHANGELOG<<EOF' >> $GITHUB_OUTPUT
                   cat changelog.md >> $GITHUB_OUTPUT
+                  echo 'EOF' >> $GITHUB_OUTPUT
+
+            - name: Prepare release body
+              id: release-body
+              shell: bash
+              env:
+                  RAW_BODY: ${{ env.IS_MANUAL == 'true' && github.event.inputs.release_body || steps.get-changelog.outputs.CHANGELOG }}
+              run: |
+                  body="$RAW_BODY"
+                  body="${body//\\n/$'\n'}"
+                  echo 'BODY<<EOF' >> $GITHUB_OUTPUT
+                  echo "$body" >> $GITHUB_OUTPUT
                   echo 'EOF' >> $GITHUB_OUTPUT
 
             - name: Create Release - macOS
@@ -143,7 +154,7 @@ jobs:
                   asset_name: MDCx-$tag-${{ matrix.build }}-${{ matrix.arch }}${{ matrix.tail }}.dmg
                   file: dist/MDCx.dmg
                   prerelease: ${{ env.IS_MANUAL == 'true' }}
-                  body: ${{ env.IS_MANUAL == 'true' && github.event.inputs.release_body || steps.get-changelog.outputs.CHANGELOG }}
+                  body: ${{ steps.release-body.outputs.BODY }}
                   tag: ${{ github.event.inputs.tag || github.ref }}
 
             - name: Create Release - Windows
@@ -154,5 +165,5 @@ jobs:
                   asset_name: MDCx-$tag-${{ matrix.build }}-${{ matrix.arch }}${{ matrix.tail }}.exe
                   file: dist/MDCx.exe
                   prerelease: ${{ env.IS_MANUAL == 'true' }}
-                  body: ${{ env.IS_MANUAL == 'true' && github.event.inputs.release_body || steps.get-changelog.outputs.CHANGELOG }}
+                  body: ${{ steps.release-body.outputs.BODY }}
                   tag: ${{ github.event.inputs.tag || github.ref }}

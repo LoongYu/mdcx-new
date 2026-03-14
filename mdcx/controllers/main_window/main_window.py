@@ -167,10 +167,10 @@ class MyMAinWindow(QMainWindow):
         self.show_net_info(
             "\n💡 说明：\n "
             "任意代理：javbus、jav321、javlibrary、mywife、giga、freejavbt、"
-            "mdtv、madouqu、7mmtv、faleno、dahlia、prestige、theporndb、cnmdb、fantastica、kin8\n "
+            "mdtv、madouqu、7mmtv、dahlia、theporndb、cnmdb、fantastica、kin8\n "
             "非日本代理：javdb、airav-cc、avsex（日本代理会报错）\n "
             "日本代理：seesaawiki、mgstage\n "
-            "无需代理：avsex、hdouban、iqqtv、airav-wiki、love6、lulubar、fc2、fc2club、fc2hub\n\n"
+            "无需代理：avsex、hdouban、iqqtv、lulubar、fc2、fc2hub\n\n"
             "▶️ 点击右上角 【开始检测】按钮以测试网络连通性。"
         )  # 检查网络界面显示提示信息
         signal_qt.add_log("🍯 你可以点击左下角的图标来 显示 / 隐藏 请求信息面板！")
@@ -1011,10 +1011,10 @@ class MyMAinWindow(QMainWindow):
             text, ok = QInputDialog.getText(
                 self,
                 "输入网址重新刮削",
-                f"文件名: {main_file_name}\n支持网站:airav_cc、airav、avsex、avsox、dmm、getchu、fc2"
-                f"、fc2club、fc2hub、iqqtv、jav321、javbus、javdb、freejavbt、javlibrary、mdtv"
-                f"、madouqu、mgstage、7mmtv、xcity、mywife、giga、faleno、dahlia、fantastica"
-                f"、prestige、hdouban、lulubar、love6、cnmdb、theporndb、kin8\n请输入番号对应的网址（不是网站首页地址！！！是番号页面地址！！！）:",
+                f"文件名: {main_file_name}\n支持网站:airav_cc、avsex、avsox、dmm、getchu、fc2"
+                f"、fc2hub、iqqtv、jav321、javbus、javdb、freejavbt、javlibrary、mdtv"
+                f"、madouqu、mgstage、7mmtv、xcity、mywife、giga、dahlia、fantastica"
+                f"、hdouban、lulubar、cnmdb、theporndb、kin8\n请输入番号对应的网址（不是网站首页地址！！！是番号页面地址！！！）:",
             )
             if ok and text:
                 website, url = deal_url(text)
@@ -1626,17 +1626,14 @@ class MyMAinWindow(QMainWindow):
 <head/>
 <body>
   <p><span style=" font-weight:700;">所有可用网站:</span></p>
-  <li>airav</li>
   <li>airav_cc</li>
   <li>avsex</li>
   <li>avsox</li>
   <li>cableav</li>
   <li>cnmdb</li>
   <li>dmm</li>
-  <li>faleno</li>
   <li>fantastica</li>
   <li>fc2</li>
-  <li>fc2club</li>
   <li>fc2hub</li>
   <li>fc2ppvdb</li>
   <li>freejavbt</li>
@@ -1651,14 +1648,12 @@ class MyMAinWindow(QMainWindow):
   <li>javdb</li>
   <li>javlibrary</li>
   <li>kin8</li>
-  <li>love6</li>
   <li>lulubar</li>
   <li>madouqu</li>
   <li>mdtv</li>
   <li>mgstage</li>
   <li>7mmtv</li>
   <li>mywife</li>
-  <li>prestige</li>
   <li>theporndb</li>
   <li>xcity</li>
   <li>dahlia</li>
@@ -1666,7 +1661,7 @@ class MyMAinWindow(QMainWindow):
   <li>official</li>
   <p><span style=" font-weight:700;">指定类型影片可指定刮削网站:<span></p>
   <p>· 欧美：theporndb </p>
-  <p>· 国产：mdtv、madouqu、hdouban、cnmdb、love6</p>
+  <p>· 国产：mdtv、madouqu、hdouban、cnmdb</p>
   <p>· 里番：getchu_dmm </p>
   <p>· Mywife：mywife </p>
   <p>· GIGA：giga </p>
@@ -1992,21 +1987,15 @@ class MyMAinWindow(QMainWindow):
                 "hscangku": ["https://hscangku.net", ""],
                 "cableav": ["https://cableav.tv", ""],
                 "lulubar": ["https://lulubar.co", ""],
-                "love6": ["https://lulubar.net", ""],
-                "yesjav": ["http://www.yesjav101.com", ""],
                 "fc2": ["https://adult.contents.fc2.com", ""],
-                "fc2club": ["https://fc2club.top", ""],
                 "fc2hub": ["https://javten.com", ""],
-                "airav": ["https://www.airav.wiki", ""],
                 "av-wiki": ["https://av-wiki.net", ""],
                 "seesaawiki": ["https://seesaawiki.jp", ""],
                 "mywife": ["https://mywife.cc", ""],
                 "giga": ["https://www.giga-web.jp", ""],
                 "kin8": ["https://www.kin8tengoku.com", ""],
                 "fantastica": ["http://fantastica-vr.com", ""],
-                "faleno": ["https://faleno.jp", ""],
                 "dahlia": ["https://dahlia-av.jp", ""],
-                "prestige": ["https://www.prestige-av.com", ""],
                 "s1s1s1": ["https://s1s1s1.com", ""],
                 "moodyz": ["https://moodyz.com", ""],
                 "madonna": ["https://www.madonna-av.com", ""],
@@ -2020,20 +2009,12 @@ class MyMAinWindow(QMainWindow):
                 "tameikegoro": ["https://tameikegoro.jp", ""],
                 "fitch": ["https://fitch-av.com", ""],
                 "kawaiikawaii": ["https://kawaiikawaii.jp", ""],
-                "befreebe": ["https://befreebe.com", ""],
-                "muku": ["https://muku.tv", ""],
                 "attackers": ["https://attackers.net", ""],
-                "mko-labo": ["https://mko-labo.net", ""],
                 "dasdas": ["https://dasdas.jp", ""],
                 "mvg": ["https://mvg.jp", ""],
                 "opera": ["https://av-opera.jp", ""],
-                "oppai": ["https://oppai-av.com", ""],
-                "v-av": ["https://v-av.com", ""],
-                "to-satsu": ["https://to-satsu.com", ""],
-                "bibian": ["https://bibian-av.com", ""],
                 "honnaka": ["https://honnaka.jp", ""],
                 "rookie": ["https://rookie-av.jp", ""],
-                "nanpa": ["https://nanpa-japan.jp", ""],
                 "hajimekikaku": ["https://hajimekikaku.com", ""],
                 "hhh-av": ["https://hhh-av.com", ""],
             }
@@ -2071,7 +2052,7 @@ class MyMAinWindow(QMainWindow):
                         each[1] = "❌ 连接失败 (被 Cloudflare 5 秒盾拦截！)"
                     else:
                         each[1] = f"✅ 连接正常{ping_host(host_address)}"
-                elif name in ["avsex", "freejavbt", "airav_cc", "airav", "madouqu", "7mmtv"]:
+                elif name in ["avsex", "freejavbt", "airav_cc", "madouqu", "7mmtv"]:
                     html_info, error = get_text_sync(each[0])
                     if html_info is None:
                         each[1] = "❌ 连接失败 请检查网络或代理设置！ " + error

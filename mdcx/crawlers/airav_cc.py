@@ -157,7 +157,7 @@ async def main(
     if language == "zh_cn":
         airav_url += "/cn"
     web_info = "\n       "
-    LogBuffer.info().write(f" \n    🌐 airav[{language.replace('zh_', '')}]")
+    LogBuffer.info().write(f" \n    🌐 airav_cc[{language.replace('zh_', '')}]")
 
     # real_url = 'https://airav5.fun/jp/playon.aspx?hid=44733'
 

@@ -220,8 +220,6 @@ def load_config(self: "MyMAinWindow"):
 
         # 增强翻译-sehua
         self.Ui.checkBox_title_sehua.setChecked(manager.config.title_sehua)
-        # 增强翻译-yesjav
-        self.Ui.checkBox_title_yesjav.setChecked(manager.config.title_yesjav)
         # 标题增强翻译-使用翻译引擎
         self.Ui.checkBox_title_translate.setChecked(title_field_config.translate)
         # 增强翻译-优先sehua

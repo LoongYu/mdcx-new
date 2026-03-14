@@ -5,7 +5,6 @@ import time
 from lxml import etree
 
 from ..config.manager import manager
-from ..crawlers import prestige
 from ..models.log_buffer import LogBuffer
 from ..number import get_number_letters
 
@@ -118,8 +117,6 @@ async def main(
         official_url = manager.computed.official_websites.get(get_number_letters(number))
         if not official_url:
             raise Exception("不在官网番号前缀列表中")
-        elif official_url == "https://www.prestige-av.com":
-            return await prestige.main(number, appoint_url)
         website_name = official_url.split(".")[-2].replace("https://", "")
         LogBuffer.req().write(f"-> {website_name}")
         real_url = appoint_url

@@ -97,7 +97,6 @@ async def main(
     appoint_url="",
     **kwargs,
 ):
-    # https://faleno.jp/top/works/fsdss564/
     # https://dahlia-av.jp/works/dldss177/
     start_time = time.time()
     website_name = "dahlia"

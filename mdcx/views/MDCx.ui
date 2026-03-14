@@ -8392,11 +8392,6 @@
                             </item>
                             <item>
                               <property name="text">
-                                <string>airav</string>
-                              </property>
-                            </item>
-                            <item>
-                              <property name="text">
                                 <string>avsex</string>
                               </property>
                             </item>
@@ -8502,17 +8497,7 @@
                             </item>
                             <item>
                               <property name="text">
-                                <string>love6</string>
-                              </property>
-                            </item>
-                            <item>
-                              <property name="text">
                                 <string>fc2</string>
-                              </property>
-                            </item>
-                            <item>
-                              <property name="text">
-                                <string>fc2club</string>
                               </property>
                             </item>
                             <item>
@@ -8542,17 +8527,7 @@
                             </item>
                             <item>
                               <property name="text">
-                                <string>faleno</string>
-                              </property>
-                            </item>
-                            <item>
-                              <property name="text">
                                 <string>dahlia</string>
-                              </property>
-                            </item>
-                            <item>
-                              <property name="text">
-                                <string>prestige</string>
                               </property>
                             </item>
                             <item>
@@ -13256,13 +13231,6 @@
                               </widget>
                             </item>
                             <item>
-                              <widget class="QCheckBox" name="checkBox_title_yesjav">
-                                <property name="text">
-                                  <string>使用yesjav中文标题</string>
-                                </property>
-                              </widget>
-                            </item>
-                            <item>
                               <widget class="QCheckBox" name="checkBox_title_translate">
                                 <property name="text">
                                   <string>使用翻译引擎翻译标题</string>
@@ -13371,7 +13339,7 @@
                               <string notr="true">color: rgb(8, 128, 128);</string>
                             </property>
                             <property name="text">
-                              <string>翻译优先级：色花（内置标题数据） &gt; yesjav（在线色花数据） &gt; 翻译引擎</string>
+                              <string>翻译优先级：色花（内置标题数据） &gt; 翻译引擎</string>
                             </property>
                           </widget>
                         </item>
@@ -22748,7 +22716,7 @@
                 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt;&lt;br /&gt; &lt;/span&gt; &lt;/p&gt;
                 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt;&lt;br /&gt; &lt;/span&gt; &lt;/p&gt;
                 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Consolas,PingFang SC,Microsoft YaHei UI';&quot;&gt;4.10.网站选择&lt;/span&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt; &lt;/span&gt; &lt;/p&gt;
-                &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Consolas,PingFang SC,Microsoft YaHei UI';&quot;&gt; 可以使用所有网站，或者指定网站（avsox,javbus,dmm,javdb,fc2club，mgstage）进行刮削。&lt;/span&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt; &lt;/span&gt; &lt;/p&gt;
+                &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Consolas,PingFang SC,Microsoft YaHei UI';&quot;&gt; 可以使用所有网站，或者指定网站（avsox,javbus,dmm,javdb,fc2hub，mgstage）进行刮削。&lt;/span&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt; &lt;/span&gt; &lt;/p&gt;
                 &lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Consolas,PingFang SC,Microsoft YaHei UI';&quot;&gt; 仅使用javdb进行刮削，尽量不要用，刮削30左右会被JAVDB封IP一段时间。&lt;/span&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt; &lt;/span&gt; &lt;/p&gt;
                 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt;&lt;br /&gt; &lt;/span&gt; &lt;/p&gt;
                 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Microsoft YaHei UI'; font-size:9pt;&quot;&gt;&lt;br /&gt; &lt;/span&gt; &lt;/p&gt;

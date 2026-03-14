@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 
 MULTI_LANGUAGE_WEBSITES = [  # 支持多语言, language 参数有意义
     Website.AIRAV_CC,
-    Website.AIRAV,
     Website.IQQTV,
     Website.JAVLIBRARY,
 ]
@@ -269,7 +268,7 @@ class FileScraper:
         title_language = self.config.get_field_config(CrawlerResultFields.TITLE).language
         org_language = title_language
 
-        if website not in ["airav_cc", "iqqtv", "airav", "avsex", "javlibrary", "mdtv", "madouqu", "lulubar"]:
+        if website not in ["airav_cc", "iqqtv", "avsex", "javlibrary", "mdtv", "madouqu", "lulubar"]:
             title_language = Language.JP
 
         elif website == "mdtv":

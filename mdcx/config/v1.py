@@ -121,12 +121,12 @@ class ConfigV1:
     scrape_like: str = r"info"
     website_single: str = r"airav_cc"
     website_youma: str = (
-        r"airav_cc,iqqtv,javbus,freejavbt,jav321,dmm,javlibrary,7mmtv,hdouban,javdb,avsex,lulubar,airav,xcity,avsox"
+        r"airav_cc,iqqtv,javbus,freejavbt,jav321,dmm,javlibrary,7mmtv,hdouban,javdb,avsex,lulubar,xcity,avsox"
     )
 
-    website_wuma: str = r"iqqtv,javbus,freejavbt,jav321,avsox,7mmtv,hdouban,javdb,airav"
+    website_wuma: str = r"iqqtv,javbus,freejavbt,jav321,avsox,7mmtv,hdouban,javdb"
     website_suren: str = r"mgstage,avsex,jav321,freejavbt,7mmtv,javbus,javdb"
-    website_fc2: str = r"fc2,fc2club,fc2hub,freejavbt,7mmtv,hdouban,javdb,avsox,airav"
+    website_fc2: str = r"fc2,fc2hub,freejavbt,7mmtv,hdouban,javdb,avsox"
     website_oumei: str = r"theporndb,javdb,javbus,hdouban"
     website_guochan: str = r"madouqu,mdtv,hdouban,cnmdb,javday"
     whole_fields: str = r"outline,actor,thumb,release,tag,"
@@ -137,33 +137,33 @@ class ConfigV1:
     title_website_exclude: str = r""
     outline_website: str = r"theporndb,dmm,jav321"
     outline_zh_website: str = r"airav_cc,avsex,iqqtv,lulubar"
-    outline_website_exclude: str = r"avsox,fc2club,javbus,javdb,javlibrary,freejavbt,hdouban"
+    outline_website_exclude: str = r"avsox,javbus,javdb,javlibrary,freejavbt,hdouban"
     actor_website: str = r"theporndb,javbus,javlibrary,javdb"
     actor_website_exclude: str = r""
     thumb_website: str = r"theporndb,javbus"
     thumb_website_exclude: str = r"javdb"
     poster_website: str = r"theporndb,avsex,javbus"
-    poster_website_exclude: str = r"airav,fc2club,fc2hub,iqqtv,7mmtv,javlibrary,lulubar"
+    poster_website_exclude: str = r"fc2hub,iqqtv,7mmtv,javlibrary,lulubar"
     extrafanart_website: str = r"javbus,freejavbt"
-    extrafanart_website_exclude: str = r"airav,airav_cc,avsex,avsox,iqqtv,javlibrary,lulubar"
+    extrafanart_website_exclude: str = r"airav_cc,avsex,avsox,iqqtv,javlibrary,lulubar"
     trailer_website: str = r"freejavbt,mgstage,dmm"
     trailer_website_exclude: str = r"7mmtv,lulubar"
     tag_website: str = r"javbus,freejavbt"
     tag_website_exclude: str = r""
     release_website: str = r"javbus,freejavbt,7mmtv"
-    release_website_exclude: str = r"fc2club,fc2hub"
+    release_website_exclude: str = r"fc2hub"
     runtime_website: str = r"javbus,freejavbt"
-    runtime_website_exclude: str = r"airav,airav_cc,fc2,fc2club,fc2hub,lulubar"
+    runtime_website_exclude: str = r"airav_cc,fc2,fc2hub,lulubar"
     score_website: str = r"jav321,javlibrary,javdb"
-    score_website_exclude: str = r"airav,airav_cc,avsex,avsox,7mmtv,fc2,fc2hub,iqqtv,javbus,xcity,lulubar"
+    score_website_exclude: str = r"airav_cc,avsex,avsox,7mmtv,fc2,fc2hub,iqqtv,javbus,xcity,lulubar"
     director_website: str = r"javbus,freejavbt"
-    director_website_exclude: str = r"airav,airav_cc,avsex,avsox,fc2,fc2hub,iqqtv,jav321,mgstage,lulubar"
+    director_website_exclude: str = r"airav_cc,avsex,avsox,fc2,fc2hub,iqqtv,jav321,mgstage,lulubar"
     series_website: str = r"javbus,freejavbt"
-    series_website_exclude: str = r"airav,airav_cc,avsex,iqqtv,7mmtv,javlibrary,lulubar"
+    series_website_exclude: str = r"airav_cc,avsex,iqqtv,7mmtv,javlibrary,lulubar"
     studio_website: str = r"javbus,freejavbt"
     studio_website_exclude: str = r"avsex"
     publisher_website: str = r"javbus"
-    publisher_website_exclude: str = r"airav,airav_cc,avsex,iqqtv,lulubar"
+    publisher_website_exclude: str = r"airav_cc,avsex,iqqtv,lulubar"
     wanted_website: str = r"javlibrary,javdb"
 
     # translate
@@ -178,7 +178,6 @@ class ConfigV1:
     llm_temperature: float = 0.2
     title_language: str = r"zh_cn"
     title_sehua: bool = True
-    title_yesjav: bool = False
     title_translate: bool = True
     title_sehua_zh: bool = True
     outline_language: str = r"zh_cn"

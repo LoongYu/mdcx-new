@@ -1,15 +1,17 @@
 ## 新增
 
-*
+* 清理失效刮削站点：`oppai`、`v-av`、`to-satsu`、`bibian`、`nanpa`、`mko-labo`、`muku`、`befreebe`、`prestige`、`faleno`、`yesjav`、`love6`、`fc2club`、`airav`
+* 同步移除对应配置项、网络检测列表、站点映射与 UI 选项，避免残留引用
+* 发布流程支持在手动输入更新日志时，将 `\n` 自动转换为真实换行
 
 ## 修复
 
-* javdb 刮削失败
+* 修复 Windows 发布包命名尾部附带 SHA ID 的问题（现为简洁文件名）
+* 修复 Windows 发布未正确带入 changelog 的问题
 
 <details>
 <summary>Full Changelog</summary>
 
-b6887b7 fix: _detail 返回值为空
-1cf11f0 chore: remove fixture tmpdir
+本次包含站点清理、配置同步、UI 同步与发布流程修复提交。
 
 </details>

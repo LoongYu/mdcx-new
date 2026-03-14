@@ -484,17 +484,14 @@ class SuffixSort(Enum):
 
 
 class Website(Enum):
-    AIRAV = "airav"
     AIRAV_CC = "airav_cc"
     AVSEX = "avsex"
     AVSOX = "avsox"
     CABLEAV = "cableav"
     CNMDB = "cnmdb"
     DMM = "dmm"
-    FALENO = "faleno"
     FANTASTICA = "fantastica"
     FC2 = "fc2"
-    FC2CLUB = "fc2club"
     FC2HUB = "fc2hub"
     FC2PPVDB = "fc2ppvdb"
     FREEJAVBT = "freejavbt"
@@ -509,14 +506,12 @@ class Website(Enum):
     JAVDB = "javdb"
     JAVLIBRARY = "javlibrary"
     KIN8 = "kin8"
-    LOVE6 = "love6"
     LULUBAR = "lulubar"
     MADOUQU = "madouqu"
     MDTV = "mdtv"
     MGSTAGE = "mgstage"
     MMTV = "7mmtv"
     MYWIFE = "mywife"
-    PRESTIGE = "prestige"
     THEPORNDB = "theporndb"
     XCITY = "xcity"
 

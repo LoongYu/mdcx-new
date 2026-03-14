@@ -2,17 +2,14 @@ from collections.abc import Callable
 
 from ..config.models import Website
 from . import (
-    airav,
     airav_cc,
     avsex,
     avsox,
     cableav,
     cnmdb,
     dahlia,
-    faleno,
     fantastica,
     fc2,
-    fc2club,
     fc2hub,
     fc2ppvdb,
     freejavbt,
@@ -27,7 +24,6 @@ from . import (
     javday,
     javlibrary_new,
     kin8,
-    love6,
     lulubar,
     madouqu,
     mdtv,
@@ -35,7 +31,6 @@ from . import (
     mmtv,
     mywife,
     official,
-    prestige,
     theporndb,
     xcity,
 )
@@ -47,16 +42,13 @@ from .javdb_new import JavdbCrawler
 CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.MMTV, mmtv.main),
     (Website.AIRAV_CC, airav_cc.main),  # lang
-    (Website.AIRAV, airav.main),  # lang
     (Website.AVSEX, avsex.main),
     (Website.AVSOX, avsox.main),
     (Website.CABLEAV, cableav.main),
     (Website.CNMDB, cnmdb.main),
     (Website.DAHLIA, dahlia.main),
-    (Website.FALENO, faleno.main),
     (Website.FANTASTICA, fantastica.main),
     (Website.FC2, fc2.main),
-    (Website.FC2CLUB, fc2club.main),
     (Website.FC2HUB, fc2hub.main),
     (Website.FC2PPVDB, fc2ppvdb.main),
     (Website.FREEJAVBT, freejavbt.main),
@@ -71,14 +63,12 @@ CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.JAVDAY, javday.main),
     (Website.JAVLIBRARY, javlibrary_new.main),  # lang
     (Website.KIN8, kin8.main),
-    (Website.LOVE6, love6.main),
     (Website.LULUBAR, lulubar.main),
     (Website.MADOUQU, madouqu.main),
     (Website.MDTV, mdtv.main),
     (Website.MGSTAGE, mgstage.main),
     (Website.MYWIFE, mywife.main),
     (Website.OFFICIAL, official.main),
-    (Website.PRESTIGE, prestige.main),
     (Website.THEPORNDB, theporndb.main),
     (Website.XCITY, xcity.main),
 ]

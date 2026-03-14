@@ -294,18 +294,15 @@ class Config(BaseModel):
             Website.AVSOX,
             Website.CABLEAV,
             Website.DMM,
-            Website.FALENO,
             Website.FANTASTICA,
             Website.GIGA,
             Website.JAV321,
             Website.JAVBUS,
             Website.JAVDAY,
             Website.JAVDB,
-            Website.LOVE6,
             Website.LULUBAR,
             Website.MGSTAGE,
             Website.MYWIFE,
-            Website.PRESTIGE,
             Website.XCITY,
         ],
         title="有码网站源",
@@ -320,7 +317,6 @@ class Config(BaseModel):
             Website.MMTV,
             Website.HDOUBAN,
             Website.JAVDB,
-            Website.AIRAV,
         ],
         title="无码网站源",
     )
@@ -339,14 +335,12 @@ class Config(BaseModel):
     website_fc2: list[Website] = Field(
         default_factory=lambda: [
             Website.FC2,
-            Website.FC2CLUB,
             Website.FC2HUB,
             Website.FREEJAVBT,
             Website.MMTV,
             Website.HDOUBAN,
             Website.JAVDB,
             Website.AVSOX,
-            Website.AIRAV,
         ],
         title="FC2网站源",
     )
@@ -360,7 +354,6 @@ class Config(BaseModel):
     )
 
     title_sehua: bool = Field(default=True, title="使用色花标题")
-    title_yesjav: bool = Field(default=False, title="使用 Yesjav 标题")
     title_sehua_zh: bool = Field(default=True, title="使用色花中文标题")
     actor_realname: bool = Field(default=True, title="演员真名")
     outline_format: list[OutlineShow] = Field(default_factory=list, title="简介格式")

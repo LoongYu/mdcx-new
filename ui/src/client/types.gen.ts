@@ -404,10 +404,6 @@ export type Config = {
      */
     title_sehua?: boolean;
     /**
-     * 标题Yesjav
-     */
-    title_yesjav?: boolean;
-    /**
      * 翻译标题
      */
     title_translate?: boolean;
@@ -1030,7 +1026,7 @@ export type ValidationError = {
 /**
  * Website
  */
-export type Website = 'airav' | 'airav_cc' | 'avsex' | 'avsox' | 'cableav' | 'cnmdb' | 'dmm' | 'faleno' | 'fantastica' | 'fc2' | 'fc2club' | 'fc2hub' | 'fc2ppvdb' | 'freejavbt' | 'getchu' | 'giga' | 'hdouban' | 'hscangku' | 'iqqtv' | 'jav321' | 'javbus' | 'javday' | 'javdb' | 'javlibrary' | 'kin8' | 'love6' | 'lulubar' | 'madouqu' | 'mdtv' | 'mgstage' | '7mmtv' | 'mywife' | 'prestige' | 'theporndb' | 'xcity';
+export type Website = 'airav_cc' | 'avsex' | 'avsox' | 'cableav' | 'cnmdb' | 'dmm' | 'fantastica' | 'fc2' | 'fc2hub' | 'fc2ppvdb' | 'freejavbt' | 'getchu' | 'giga' | 'hdouban' | 'hscangku' | 'iqqtv' | 'jav321' | 'javbus' | 'javday' | 'javdb' | 'javlibrary' | 'kin8' | 'lulubar' | 'madouqu' | 'mdtv' | 'mgstage' | '7mmtv' | 'mywife' | 'theporndb' | 'xcity';
 
 /**
  * WebsiteSet

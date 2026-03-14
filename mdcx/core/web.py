@@ -359,48 +359,25 @@ async def _get_big_thumb(result: CrawlersResult, other: OtherInfo):
     number = result.number
     letters = result.letters
     number_lower_line = number.lower()
-    number_lower_no_line = number_lower_line.replace("-", "")
     thumb_width = 0
 
-    # faleno.jp 番号检查，都是大图，返回即可
-    if result.thumb_from in ["faleno", "dahlia"]:
+    # dahlia 图片默认较大，直接返回即可
+    if result.thumb_from in ["dahlia"]:
         if result.thumb:
             LogBuffer.log().write(f"\n 🖼 HD Thumb found! ({result.thumb_from})({get_used_time(start_time)}s)")
         other.poster_big = True
         return result
 
-    # prestige 图片有的是大图，需要检测图片分辨率
-    elif result.thumb_from in ["prestige", "mgstage"]:
+    # mgstage 图片有的是大图，需要检测图片分辨率
+    elif result.thumb_from in ["mgstage"]:
         if result.thumb:
             thumb_width, h = await get_imgsize(result.thumb)
 
     # 片商官网查询
     elif HDPicSource.OFFICIAL in manager.config.download_hd_pics:
-        # faleno.jp 番号检查
-        if re.findall(r"F[A-Z]{2}SS", number):
-            req_url = f"https://faleno.jp/top/works/{number_lower_no_line}/"
-            response, error = await manager.computed.async_client.get_text(req_url)
-            if response is not None:
-                temp_url = re.findall(
-                    r'src="((https://cdn.faleno.net/top/wp-content/uploads/[^_]+_)([^?]+))\?output-quality=', response
-                )
-                if temp_url:
-                    result.thumb = temp_url[0][0]
-                    result.poster = temp_url[0][1] + "2125.jpg"
-                    result.thumb_from = "faleno"
-                    result.poster_from = "faleno"
-                    other.poster_big = True
-                    trailer_temp = re.findall(r'class="btn09"><a class="pop_sample" href="([^"]+)', response)
-                    if trailer_temp:
-                        result.trailer = trailer_temp[0]
-                        result.trailer_from = "faleno"
-                    LogBuffer.log().write(f"\n 🖼 HD Thumb found! (faleno)({get_used_time(start_time)}s)")
-                    return result
-
         # km-produce.com 番号检查
         number_letter = letters.lower()
         kmp_key = ["vrkm", "mdtm", "mkmp", "savr", "bibivr", "scvr", "slvr", "averv", "kbvr", "cbikmv"]
-        prestige_key = ["abp", "abw", "aka", "prdvr", "pvrbst", "sdvr", "docvr"]
         if number_letter in kmp_key:
             req_url = f"https://km-produce.com/img/title1/{number_lower_line}.jpg"
             real_url = await check_url(req_url)
@@ -409,24 +386,6 @@ async def _get_big_thumb(result: CrawlersResult, other: OtherInfo):
                 result.thumb_from = "km-produce"
                 LogBuffer.log().write(f"\n 🖼 HD Thumb found! (km-produce)({get_used_time(start_time)}s)")
                 return result
-
-        # www.prestige-av.com 番号检查
-        elif number_letter in prestige_key:
-            number_num = re.findall(r"\d+", number)[0]
-            if number_letter == "abw" and int(number_num) > 280:
-                pass
-            else:
-                req_url = f"https://www.prestige-av.com/api/media/goods/prestige/{number_letter}/{number_num}/pb_{number_lower_line}.jpg"
-                if number_letter == "docvr":
-                    req_url = f"https://www.prestige-av.com/api/media/goods/doc/{number_letter}/{number_num}/pb_{number_lower_line}.jpg"
-                if (await get_imgsize(req_url))[0] >= 800:
-                    result.thumb = req_url
-                    result.poster = req_url.replace("/pb_", "/pf_")
-                    result.thumb_from = "prestige"
-                    result.poster_from = "prestige"
-                    other.poster_big = True
-                    LogBuffer.log().write(f"\n 🖼 HD Thumb found! (prestige)({get_used_time(start_time)}s)")
-                    return result
 
     # 使用google以图搜图
     pic_url = result.thumb
@@ -508,7 +467,7 @@ async def _get_big_poster(result: CrawlersResult, other: OtherInfo):
     ):
         hd_pic_url, poster_size = await get_big_pic_by_google(poster_url, poster=True)
         if hd_pic_url:
-            if "prestige" in result.poster or result.poster_from == "Amazon":
+            if result.poster_from == "Amazon":
                 poster_width, _ = await get_imgsize(poster_url)
             if poster_size[0] > poster_width:
                 result.poster = hd_pic_url

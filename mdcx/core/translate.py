@@ -7,7 +7,7 @@ import traceback
 import zhconv
 
 from ..base.translate import deepl_translate, google_translate, llm_translate, youdao_translate
-from ..base.web import get_actorname, get_yesjav_title
+from ..base.web import get_actorname
 from ..config.enums import FieldRule, Language, TagInclude
 from ..config.manager import manager
 from ..config.models import Translator
@@ -243,7 +243,6 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
     trans_outline = ""
     title_sehua = manager.config.title_sehua
     title_sehua_zh = manager.config.title_sehua_zh
-    title_yesjav = manager.config.title_yesjav
     title_is_jp = is_japanese(json_data.title)
 
     # 处理title
@@ -261,14 +260,6 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
             if movie_title:
                 json_data.title = movie_title
                 LogBuffer.log().write(f"\n 🌸 Sehua title done!({get_used_time(start_time)}s)")
-
-        # 匹配网络高质量标题（yesjav， 可在线更新）
-        if not movie_title and title_yesjav and title_is_jp:
-            start_time = time.time()
-            movie_title = await get_yesjav_title(movie_number)
-            if movie_title and not is_japanese(movie_title):
-                json_data.title = movie_title
-                LogBuffer.log().write(f"\n 🆈 Yesjav title done!({get_used_time(start_time)}s)")
 
         # 使用json_data数据
         if not movie_title and title_translate and title_is_jp:
