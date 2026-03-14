@@ -127,20 +127,18 @@ jobs:
                 fi
                 bash scripts/build-macos.sh --create-dmg --version "$version"
 
-            - name: Get changelog
-              id: get-changelog
-              run: |
-                  echo 'CHANGELOG<<EOF' >> $GITHUB_OUTPUT
-                  cat changelog.md >> $GITHUB_OUTPUT
-                  echo 'EOF' >> $GITHUB_OUTPUT
-
             - name: Prepare release body
               id: release-body
               shell: bash
               env:
-                  RAW_BODY: ${{ env.IS_MANUAL == 'true' && github.event.inputs.release_body || steps.get-changelog.outputs.CHANGELOG }}
+                  INPUT_BODY: ${{ github.event.inputs.release_body }}
+                  IS_MANUAL: ${{ env.IS_MANUAL }}
               run: |
-                  body="$RAW_BODY"
+                  if [[ "$IS_MANUAL" == "true" && -n "$INPUT_BODY" ]]; then
+                    body="$INPUT_BODY"
+                  else
+                    body="$(cat changelog.md)"
+                  fi
                   body="${body//\\n/$'\n'}"
                   echo 'BODY<<EOF' >> $GITHUB_OUTPUT
                   echo "$body" >> $GITHUB_OUTPUT
