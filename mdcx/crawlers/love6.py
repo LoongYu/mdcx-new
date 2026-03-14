@@ -4,6 +4,7 @@ import time
 
 from lxml import etree
 
+from ..config.enums import Website
 from ..config.manager import manager
 from ..models.log_buffer import LogBuffer
 
@@ -106,7 +107,7 @@ def get_outline(html):
     return a[0].strip() if a else ""
 
 
-def get_real_url(html):
+def get_real_url(html, site_url: str):
     title = ""
     real_url = ""
     poster_url = ""
@@ -117,7 +118,7 @@ def get_real_url(html):
         each_poster = each.xpath('a/div[@class="search_img"]/img/@src')
         if each_title and each_href:
             title = each_title[0]
-            real_url = "https://love6.tv" + each_href[0]
+            real_url = site_url + each_href[0]
             poster_url = each_poster[0] if each_poster else ""
         break
     return title, real_url, poster_url
@@ -145,13 +146,14 @@ async def main(
     debug_info = ""
     title = ""
     poster = ""
+    love6_url = manager.config.get_site_url(Website.LOVE6, "https://lulubar.net").rstrip("/")
 
-    # real_url = 'https://love6.tv/albums/view/NDI2Mw=='
+    # real_url = 'https://lulubar.net/albums/view/NDI2Mw=='
 
     try:  # 捕获主动抛出的异常
         if not real_url:
             # 通过搜索获取real_url
-            url_search = f"https://love6.tv/search/all/?search_text={number}"
+            url_search = f"{love6_url}/search/all/?search_text={number}"
             debug_info = f"搜索地址: {url_search} "
             LogBuffer.info().write(web_info + debug_info)
 
@@ -163,7 +165,7 @@ async def main(
                 raise Exception(debug_info)
 
             html = etree.fromstring(html_search, etree.HTMLParser())
-            title, real_url, poster = get_real_url(html)
+            title, real_url, poster = get_real_url(html, love6_url)
             if not real_url:
                 debug_info = "搜索结果: 未匹配到番号！"
                 LogBuffer.info().write(web_info + debug_info)

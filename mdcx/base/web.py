@@ -98,11 +98,11 @@ async def check_url(url: str, length: bool = False, real_url: bool = False):
 async def get_avsox_domain() -> str:
     issue_url = "https://tellme.pw/avsox"
     response, error = await manager.computed.async_client.get_text(issue_url)
-    domain = "https://avsox.click"
+    domain = "https://avsox.com"
     if response is not None:
         res = re.findall(r'(https://[^"]+)', response)
         for s in res:
-            if s and "https://avsox.com" not in s or "api.qrserver.com" not in s:
+            if s and "api.qrserver.com" not in s:
                 return s
     return domain
 

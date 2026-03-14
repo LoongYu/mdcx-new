@@ -201,7 +201,7 @@ async def main(
     LogBuffer.info().write(" \n    🌐 javday")
     debug_info = ""
 
-    javday_url = manager.config.get_site_url(Website.JAVDAY, "https://javday.tv")
+    javday_url = manager.config.get_site_url(Website.JAVDAY, "https://javday.app")
     real_url = appoint_url
     real_html_content = ""
     try:
