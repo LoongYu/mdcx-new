@@ -133,8 +133,8 @@ def save_config(self: "MyMAinWindow"):
     except ValueError:
         manager.config.website_single = Website.AIRAV_CC  # 默认值
 
-    def get_sites(text: str) -> set[Website]:
-        return {Website(site) for site in str_to_list(text, ",")}
+    def get_sites(text: str) -> list[Website]:
+        return [Website(site) for site in str_to_list(text, ",")]
 
     manager.config.website_youma = get_sites(self.Ui.lineEdit_website_youma.text())
     manager.config.website_wuma = get_sites(self.Ui.lineEdit_website_wuma.text())

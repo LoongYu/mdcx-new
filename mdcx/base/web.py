@@ -12,6 +12,7 @@ from PIL import Image
 from ping3 import ping
 
 from ..config.manager import manager
+from ..consts import GITHUB_LATEST_RELEASE_API
 from ..manual import ManualConfig
 from ..models.log_buffer import LogBuffer
 from ..signals import signal
@@ -236,8 +237,7 @@ def ping_host(host_address: str) -> str:
 
 def check_version() -> int | None:
     if manager.config.update_check:
-        url = "https://api.github.com/repos/sqzw-x/mdcx/releases/latest"
-        res_json, error = get_json_sync(url)
+        res_json, error = get_json_sync(GITHUB_LATEST_RELEASE_API)
         if res_json is not None:
             try:
                 latest_version = res_json["tag_name"]

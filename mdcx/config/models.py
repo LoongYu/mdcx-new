@@ -286,8 +286,8 @@ class Config(BaseModel):
 
     # region: Website Settings
     website_single: Website = Field(default=Website.AIRAV_CC, title="单个网站")  # todo 移除
-    website_youma: set[Website] = Field(
-        default_factory=lambda: {
+    website_youma: list[Website] = Field(
+        default_factory=lambda: [
             Website.OFFICIAL,
             Website.IQQTV,
             Website.AVSEX,
@@ -307,11 +307,11 @@ class Config(BaseModel):
             Website.MYWIFE,
             Website.PRESTIGE,
             Website.XCITY,
-        },
+        ],
         title="有码网站源",
     )
-    website_wuma: set[Website] = Field(
-        default_factory=lambda: {
+    website_wuma: list[Website] = Field(
+        default_factory=lambda: [
             Website.IQQTV,
             Website.JAVBUS,
             Website.FREEJAVBT,
@@ -321,11 +321,11 @@ class Config(BaseModel):
             Website.HDOUBAN,
             Website.JAVDB,
             Website.AIRAV,
-        },
+        ],
         title="无码网站源",
     )
-    website_suren: set[Website] = Field(
-        default_factory=lambda: {
+    website_suren: list[Website] = Field(
+        default_factory=lambda: [
             Website.MGSTAGE,
             Website.AVSEX,
             Website.JAV321,
@@ -333,11 +333,11 @@ class Config(BaseModel):
             Website.MMTV,
             Website.JAVBUS,
             Website.JAVDB,
-        },
+        ],
         title="素人网站源",
     )
-    website_fc2: set[Website] = Field(
-        default_factory=lambda: {
+    website_fc2: list[Website] = Field(
+        default_factory=lambda: [
             Website.FC2,
             Website.FC2CLUB,
             Website.FC2HUB,
@@ -347,15 +347,15 @@ class Config(BaseModel):
             Website.JAVDB,
             Website.AVSOX,
             Website.AIRAV,
-        },
+        ],
         title="FC2网站源",
     )
-    website_oumei: set[Website] = Field(
-        default_factory=lambda: {Website.THEPORNDB, Website.JAVDB, Website.JAVBUS, Website.HDOUBAN},
+    website_oumei: list[Website] = Field(
+        default_factory=lambda: [Website.THEPORNDB, Website.JAVDB, Website.JAVBUS, Website.HDOUBAN],
         title="欧美网站源",
     )
-    website_guochan: set[Website] = Field(
-        default_factory=lambda: {Website.MADOUQU, Website.MDTV, Website.HDOUBAN, Website.CNMDB, Website.JAVDAY},
+    website_guochan: list[Website] = Field(
+        default_factory=lambda: [Website.MADOUQU, Website.MDTV, Website.HDOUBAN, Website.CNMDB, Website.JAVDAY],
         title="国产网站源",
     )
 

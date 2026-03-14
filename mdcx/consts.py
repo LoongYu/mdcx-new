@@ -2,7 +2,11 @@ import platform
 import sys
 from pathlib import Path
 
-LOCAL_VERSION = 220250909
+LOCAL_VERSION = 22026031403
+GITHUB_REPO = "LoongYu/mdcx-new"
+GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
+GITHUB_ISSUES_NEW_URL = f"https://github.com/{GITHUB_REPO}/issues/new/choose"
+GITHUB_LATEST_RELEASE_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 os_name = platform.system()
 mac_ver = platform.mac_ver()[0]
