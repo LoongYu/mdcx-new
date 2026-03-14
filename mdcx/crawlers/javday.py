@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import re
 import time
+from urllib.parse import quote_plus, urljoin
 
 from lxml import etree
 
@@ -86,17 +87,92 @@ def get_studio(series, tag, lable_list):
 
 
 def get_cover(html, javday_url):
-    result = html.xpath("/html/head/meta[8]")
+    result = html.xpath(
+        '//meta[@property="og:image"]/@content | //meta[@name="og:image"]/@content | //meta[@name="twitter:image"]/@content'
+    )
+    if not result:
+        result = html.xpath("/html/head/meta[8]/@content")
     if result:
-        result = result[0].get("content")
-        if "http" not in result:
-            result = javday_url + result
+        result = result[0]
+        if result and "http" not in result:
+            result = urljoin(javday_url + "/", result)
     return result if result else ""
 
 
 def get_tag(html):  # 获取演员
     result = html.xpath('//div[@class="category"]/a[contains(@href, "/class/")]/text()')
     return ",".join(result)
+
+
+def _normalize_release_date(value: str) -> tuple[str, str]:
+    """
+    将站点时间文本归一化为 release(YYYY-MM-DD) 和 year(YYYY)。
+    """
+    value = (value or "").strip()
+    if not value:
+        return "", ""
+    value = value.replace("/", "-").replace(".", "-")
+    m = re.search(r"(\d{4})[-年](\d{1,2})[-月](\d{1,2})", value)
+    if not m:
+        m = re.search(r"(\d{4})-(\d{1,2})-(\d{1,2})", value)
+    if not m:
+        y = re.search(r"\d{4}", value)
+        year = y.group() if y else ""
+        return "", year
+    year, month, day = m.group(1), int(m.group(2)), int(m.group(3))
+    return f"{year}-{month:02d}-{day:02d}", year
+
+
+def get_release_from_upload_time(html, html_content: str) -> tuple[str, str]:
+    """
+    优先从「上傳時間/发布时间」提取发布日期。
+    """
+    # 1) 页面字段: <p class="list-item"><span>上傳時間：</span><span>2026-01-29 23:40:06</span></p>
+    pairs = html.xpath('//p[contains(@class,"list-item")]')
+    for p in pairs:
+        key = "".join(p.xpath("./span[1]//text()")).strip()
+        if any(x in key for x in ["上傳時間", "上传时间", "發佈時間", "发布时间", "上架時間", "上架时间"]):
+            value = "".join(p.xpath("./span[last()]//text()")).strip()
+            release, year = _normalize_release_date(value)
+            if release or year:
+                return release, year
+
+    # 2) meta
+    meta_values = html.xpath(
+        '//meta[@property="article:published_time"]/@content | '
+        '//meta[@name="article:published_time"]/@content | '
+        '//meta[@property="og:published_time"]/@content | '
+        '//meta[@name="og:published_time"]/@content'
+    )
+    for value in meta_values:
+        release, year = _normalize_release_date(value)
+        if release or year:
+            return release, year
+
+    # 3) JSON-LD
+    scripts = html.xpath('//script[@type="application/ld+json"]/text()')
+    for text in scripts:
+        if not text:
+            continue
+        m = re.search(r'"(?:datePublished|uploadDate)"\s*:\s*"([^"]+)"', text)
+        if m:
+            release, year = _normalize_release_date(m.group(1))
+            if release or year:
+                return release, year
+
+    # 4) 原始 HTML 兜底（包含注释区）
+    if html_content:
+        m = re.search(
+            r"(?:上傳時間|上传时间|發佈時間|发布时间)[^0-9]{0,30}"
+            r"(\d{4}[-/.]\d{1,2}[-/.]\d{1,2}(?:\s+\d{1,2}:\d{2}:\d{2})?)",
+            html_content,
+        )
+        if m:
+            release, year = _normalize_release_date(m.group(1))
+            if release or year:
+                return release, year
+
+    return "", ""
 
 
 def get_real_number_title(
@@ -186,6 +262,99 @@ def get_real_title(
     return title.replace(" x ", "").replace(" X ", "").strip(" -.")
 
 
+def _norm_text(text: str) -> str:
+    return re.sub(r"[\s._-]+", "", text.upper())
+
+
+def get_real_url(search_html: str, search_number: str, file_number: str, javday_url: str) -> str:
+    """从搜索页中提取最可能的详情页链接."""
+    html = etree.fromstring(search_html, etree.HTMLParser())
+    link_nodes = html.xpath(
+        '//h4[contains(@class,"post-title")]/a | '
+        '//h3[contains(@class,"post-title")]/a | '
+        '//h2[contains(@class,"post-title")]/a | '
+        '//h2[contains(@class,"entry-title")]/a | '
+        '//a[contains(@href,"/videos/")]'
+    )
+    if not link_nodes:
+        return ""
+
+    # 候选匹配词：当前搜索词 + 原始番号
+    wanted = []
+    for raw in (search_number, file_number):
+        raw = (raw or "").strip()
+        if not raw:
+            continue
+        wanted.append(raw)
+        if m := re.search(r"(\d*[A-Z]{2,})\s*-?\s*(\d{2,})(?:\s*-\s*(\d+))?", raw.upper()):
+            part = f"{m[1]}-{m[2]}"
+            if m[3]:
+                part = f"{part}-{m[3]}"
+            wanted.append(part)
+    wanted_norm = [_norm_text(w) for w in wanted if w]
+
+    links = []
+    for node in link_nodes:
+        href = (node.get("href") or "").strip()
+        if not href:
+            continue
+        title = (node.get("title") or "".join(node.xpath(".//text()")) or "").strip()
+        abs_url = urljoin(javday_url + "/", href)
+        links.append((abs_url, title))
+
+    # 去重保序
+    unique_links = []
+    seen = set()
+    for url, title in links:
+        if url in seen:
+            continue
+        seen.add(url)
+        unique_links.append((url, title))
+
+    # 优先命中标题包含目标番号的结果
+    for url, title in unique_links:
+        title_norm = _norm_text(title)
+        if any(w and w in title_norm for w in wanted_norm):
+            return url
+
+    # 兜底：第一个 /videos/ 链接
+    for url, _ in unique_links:
+        if "/videos/" in url:
+            return url
+    return unique_links[0][0] if unique_links else ""
+
+
+def get_search_candidates(number, number_list, filename_list):
+    """
+    生成 javday /videos/{id}/ 的候选 ID 列表。
+    优先使用番号候选；仅在番号候选为空时才回退文件名候选，避免误用路径分词导致超时。
+    """
+    # 先用番号候选，必要时补上原始 number；尽量不走 filename_list 的噪声词。
+    candidates = [n for n in number_list if n]
+    if number and number not in candidates:
+        candidates.append(number)
+    if not candidates:
+        candidates = [n for n in filename_list if n]
+
+    result = []
+    for each in candidates:
+        each = str(each).strip()
+        if not each:
+            continue
+        # 去除明显不是番号的路径片段
+        if "\\" in each or "/" in each:
+            continue
+        # javday 的 videos 路径对空格不稳定，优先使用连字符版本
+        normalized = each.replace("_", "-")
+        normalized = re.sub(r"\s+", "-", normalized)
+        normalized = re.sub(r"-{2,}", "-", normalized).strip("-")
+        if normalized and normalized not in result:
+            result.append(normalized)
+        if each not in result and len(each) <= 60:
+            result.append(each)
+    return result
+
+
 async def main(
     number,
     appoint_url="",
@@ -207,25 +376,46 @@ async def main(
     try:
         # 处理番号
         number_list, filename_list = get_number_list(number, appoint_number, file_path)
-        if not real_url:
-            total_number_list = number_list + filename_list
-            number_list_new = list(set(total_number_list))
-            number_list_new.sort(key=total_number_list.index)
-            for number in number_list_new:
-                testNumberUrl = javday_url + f"/videos/{number}/"
-                debug_info = f'搜索地址: {testNumberUrl} {{"wd": {number}}}'
+        if real_url:
+            debug_info = f"指定网址: {real_url}"
+            LogBuffer.info().write(web_info + debug_info)
+            real_html_content, error = await manager.computed.async_client.get_text(real_url)
+            if real_html_content is None:
+                debug_info = f"网络请求错误: {error}"
                 LogBuffer.info().write(web_info + debug_info)
-                html_content, error = await manager.computed.async_client.get_text(testNumberUrl)
+                raise Exception(debug_info)
+        else:
+            search_list = get_search_candidates(number, number_list, filename_list)
+            for search_number in search_list:
+                search_url = javday_url.rstrip("/") + f"/search/?wd={quote_plus(search_number)}"
+                debug_info = f'搜索地址: {search_url} {{"wd": {search_number}}}'
+                LogBuffer.info().write(web_info + debug_info)
+                search_html, error = await manager.computed.async_client.get_text(search_url)
+                if search_html is None:
+                    debug_info = f"网络请求错误: {error}"
+                    LogBuffer.info().write(web_info + debug_info)
+                    continue
+                if "Just a moment..." in search_html and "cf_chl_opt" in search_html:
+                    debug_info = "网络请求错误: 触发 Cloudflare 验证"
+                    LogBuffer.info().write(web_info + debug_info)
+                    continue
+
+                detail_url = get_real_url(search_html, search_number, number, javday_url)
+                if not detail_url:
+                    debug_info = f"找不到番号: {search_number}"
+                    LogBuffer.info().write(web_info + debug_info)
+                    continue
+                html_content, error = await manager.computed.async_client.get_text(detail_url)
                 if html_content is None:
                     debug_info = f"网络请求错误: {error}"
                     LogBuffer.info().write(web_info + debug_info)
                 else:
                     if "你似乎來到了沒有視頻存在的荒原" in html_content:
-                        debug_info = f"找不到番号: {number}"
+                        debug_info = f"找不到番号: {search_number}"
                         LogBuffer.info().write(web_info + debug_info)
                         continue
-                    debug_info = f"找到网页: {testNumberUrl}"
-                    real_url = testNumberUrl
+                    debug_info = f"找到网页: {detail_url}"
+                    real_url = detail_url
                     real_html_content = html_content
                     break
             else:
@@ -241,8 +431,7 @@ async def main(
             series, tag, actor = get_some_info(html_info, title, file_path)
             actor_photo = get_actor_photo(actor)
             cover_url = get_cover(html_info, javday_url)  # 获取cover
-            release = ""
-            year = ""
+            release, year = get_release_from_upload_time(html_info, real_html_content)
             studio = get_studio(series, tag, lable_list)
             number, title = get_real_number_title(
                 number, title, number_list, appoint_number, appoint_url, lable_list, tag, actor, series
