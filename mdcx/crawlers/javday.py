@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 import time
-from urllib.parse import quote_plus, urljoin
+from urllib.parse import quote, urljoin
 
 from lxml import etree
 
@@ -266,6 +266,91 @@ def _norm_text(text: str) -> str:
     return re.sub(r"[\s._-]+", "", text.upper())
 
 
+def _norm_code(text: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", "", (text or "").upper())
+
+
+def is_cloudflare_blocked(html: str) -> bool:
+    html_lower = (html or "").lower()
+    return (
+        ("just a moment" in html_lower and ("cf_chl_opt" in html_lower or "cloudflare" in html_lower))
+        or "attention required" in html_lower
+        or "checking your browser before accessing" in html_lower
+    )
+
+
+async def fetch_text_with_fallback(url: str, *, referer: str = "") -> tuple[str | None, str]:
+    """
+    获取网页文本：
+    1) 默认请求
+    2) 直连（仅启用代理时）
+    3) 带浏览器风格请求头
+    4) 直连 + 浏览器风格请求头（仅启用代理时）
+    """
+    headers_like_browser = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Upgrade-Insecure-Requests": "1",
+    }
+    if referer:
+        headers_like_browser["Referer"] = referer
+
+    plans: list[tuple[bool, dict[str, str] | None, str]] = [
+        (True, None, "默认请求"),
+    ]
+    if manager.config.use_proxy:
+        plans.append((False, None, "直连请求"))
+    plans.append((True, headers_like_browser, "浏览器头请求"))
+    if manager.config.use_proxy:
+        plans.append((False, headers_like_browser, "直连+浏览器头请求"))
+
+    last_error = ""
+    for use_proxy, headers, plan_name in plans:
+        html, error = await manager.computed.async_client.get_text(url, headers=headers, use_proxy=use_proxy)
+        if html is None:
+            if error:
+                last_error = f"{error} [{plan_name}]"
+            continue
+        if is_cloudflare_blocked(html):
+            last_error = f"触发 Cloudflare 验证 [{plan_name}]"
+            continue
+        return html, ""
+
+    return None, last_error or "请求失败"
+
+
+def get_detail_slugs(number: str) -> list[str]:
+    """
+    生成 /videos/{slug}/ 的候选 slug.
+    javday 对部分番号要求去掉分隔符（如 MD0356、MDSR00131）。
+    """
+    raw = str(number or "").strip().upper()
+    if not raw:
+        return []
+    slugs: list[str] = []
+
+    def add(v: str):
+        v = v.strip().strip("/")
+        if v and v not in slugs:
+            slugs.append(v)
+
+    # 原样（统一 _ 与空格）
+    normalized = re.sub(r"[\s_]+", "-", raw)
+    normalized = re.sub(r"-{2,}", "-", normalized).strip("-")
+    add(normalized)
+
+    # 去掉分隔符（命中率更高）
+    compact = _norm_code(raw)
+    add(compact)
+
+    # 兜底：去掉空白和下划线但保留中划线
+    add(raw.replace("_", "-").replace(" ", ""))
+
+    return slugs
+
+
 def get_real_url(search_html: str, search_number: str, file_number: str, javday_url: str) -> str:
     """从搜索页中提取最可能的详情页链接."""
     html = etree.fromstring(search_html, etree.HTMLParser())
@@ -329,10 +414,32 @@ def get_search_candidates(number, number_list, filename_list):
     生成 javday /videos/{id}/ 的候选 ID 列表。
     优先使用番号候选；仅在番号候选为空时才回退文件名候选，避免误用路径分词导致超时。
     """
-    # 先用番号候选，必要时补上原始 number；尽量不走 filename_list 的噪声词。
-    candidates = [n for n in number_list if n]
-    if number and number not in candidates:
+    # 优先使用外部识别到的番号（避免被文件名噪声词抢到前面）
+    candidates = []
+    if number:
         candidates.append(number)
+
+    # 当存在明确番号时，仅保留与其“编码相近”的候选，过滤掉如 CCTV666 这类来源于域名的噪声
+    norm_number = _norm_code(number) if number else ""
+    for n in number_list:
+        n = str(n or "").strip()
+        if not n:
+            continue
+        norm_n = _norm_code(n)
+        if norm_number and not (norm_number in norm_n or norm_n in norm_number):
+            continue
+        if n not in candidates:
+            candidates.append(n)
+    # 从文件名候选中提取“像番号”的片段，补充搜索项（避免纯标题噪声）。
+    for each in filename_list:
+        each = str(each).upper()
+        if not each:
+            continue
+        # 例如: MNSC-MB-133 / MDSR-0013-1 / MD-0240
+        found = re.findall(r"\b([A-Z]{2,6}(?:-[A-Z]{1,4})?-\d{2,5}(?:-\d{1,2})?)\b", each)
+        for item in found:
+            if item not in candidates:
+                candidates.append(item)
     if not candidates:
         candidates = [n for n in filename_list if n]
 
@@ -379,7 +486,7 @@ async def main(
         if real_url:
             debug_info = f"指定网址: {real_url}"
             LogBuffer.info().write(web_info + debug_info)
-            real_html_content, error = await manager.computed.async_client.get_text(real_url)
+            real_html_content, error = await fetch_text_with_fallback(real_url, referer=javday_url.rstrip("/") + "/")
             if real_html_content is None:
                 debug_info = f"网络请求错误: {error}"
                 LogBuffer.info().write(web_info + debug_info)
@@ -387,25 +494,63 @@ async def main(
         else:
             search_list = get_search_candidates(number, number_list, filename_list)
             for search_number in search_list:
-                search_url = javday_url.rstrip("/") + f"/search/?wd={quote_plus(search_number)}"
+                # 优先详情直连（当前环境下 search 容易被 Cloudflare 403）
+                detail_ok = False
+                for detail_slug in get_detail_slugs(search_number):
+                    detail_try_url = javday_url.rstrip("/") + f"/videos/{quote(detail_slug, safe='')}/"
+                    debug_info = f"详情直连尝试: {detail_try_url}"
+                    LogBuffer.info().write(web_info + debug_info)
+                    html_content, detail_error = await fetch_text_with_fallback(
+                        detail_try_url, referer=javday_url.rstrip("/") + "/"
+                    )
+                    if html_content is None:
+                        debug_info = f"网络请求错误: {detail_error}"
+                        LogBuffer.info().write(web_info + debug_info)
+                        continue
+                    if "你似乎來到了沒有視頻存在的荒原" in html_content:
+                        debug_info = f"找不到番号: {detail_slug}"
+                        LogBuffer.info().write(web_info + debug_info)
+                        continue
+                    debug_info = f"详情直连成功: {detail_try_url}"
+                    LogBuffer.info().write(web_info + debug_info)
+                    real_url = detail_try_url
+                    real_html_content = html_content
+                    detail_ok = True
+                    break
+
+                if detail_ok:
+                    break
+
+                search_url = javday_url.rstrip("/") + f"/search/?wd={quote(search_number, safe='')}"
                 debug_info = f'搜索地址: {search_url} {{"wd": {search_number}}}'
                 LogBuffer.info().write(web_info + debug_info)
-                search_html, error = await manager.computed.async_client.get_text(search_url)
+                search_html, error = await fetch_text_with_fallback(search_url, referer=javday_url.rstrip("/") + "/")
                 if search_html is None:
-                    debug_info = f"网络请求错误: {error}"
+                    # 兼容: search 被 Cloudflare 拦截时，回退到详情页直连尝试
+                    detail_try_url = javday_url.rstrip("/") + f"/videos/{search_number}/"
+                    debug_info = f"网络请求错误: {error}，尝试详情直连: {detail_try_url}"
                     LogBuffer.info().write(web_info + debug_info)
-                    continue
-                if "Just a moment..." in search_html and "cf_chl_opt" in search_html:
-                    debug_info = "网络请求错误: 触发 Cloudflare 验证"
+                    html_content, detail_error = await fetch_text_with_fallback(detail_try_url, referer=search_url)
+                    if html_content is None:
+                        debug_info = f"网络请求错误: {detail_error}"
+                        LogBuffer.info().write(web_info + debug_info)
+                        continue
+                    if "你似乎來到了沒有視頻存在的荒原" in html_content:
+                        debug_info = f"找不到番号: {search_number}"
+                        LogBuffer.info().write(web_info + debug_info)
+                        continue
+                    debug_info = f"搜索受限，详情直连成功: {detail_try_url}"
                     LogBuffer.info().write(web_info + debug_info)
-                    continue
+                    real_url = detail_try_url
+                    real_html_content = html_content
+                    break
 
                 detail_url = get_real_url(search_html, search_number, number, javday_url)
                 if not detail_url:
                     debug_info = f"找不到番号: {search_number}"
                     LogBuffer.info().write(web_info + debug_info)
                     continue
-                html_content, error = await manager.computed.async_client.get_text(detail_url)
+                html_content, error = await fetch_text_with_fallback(detail_url, referer=search_url)
                 if html_content is None:
                     debug_info = f"网络请求错误: {error}"
                     LogBuffer.info().write(web_info + debug_info)
