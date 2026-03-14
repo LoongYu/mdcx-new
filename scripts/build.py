@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import platform
 import re
 import shutil
@@ -98,12 +99,11 @@ class BuildManager:
 
         # 检查 create-dmg
         if self.is_mac and self.create_dmg:
-            r = self._run_command(["create-dmg", "--version"])
-            if not r:
-                logger.warning("create-dmg 未安装, 尝试安装: brew install create-dmg ...")
-                self._run_command(["brew", "install", "create-dmg"], error_msg="create-dmg 安装失败")
-                r = self._run_command(["create-dmg", "--version"])
-            logger.info(f"\tcreate-dmg 版本: {r}")
+            r = self._run_command(["create-dmg", "--version"], error_msg=None)
+            if r:
+                logger.info(f"\tcreate-dmg 版本: {r}")
+            else:
+                logger.warning("create-dmg 未安装，将使用 hdiutil 兼容模式创建 DMG（含 Applications 快捷方式）")
 
         logger.info("检查必要文件...")
         required_files = ["main.py", "mdcx", "resources/Img/MDCx.icns", "resources", "libs"]
@@ -205,47 +205,51 @@ class BuildManager:
         """创建DMG文件"""
         logger.info("(macOS) 创建 DMG 文件...")
         dmg_start = time.time()
-        cmd = [
-            "create-dmg",
-            "--volname",
-            self.app_name,
-            "--volicon",
-            "resources/Img/MDCx.icns",
-            "--window-pos",
-            "200",
-            "120",
-            "--window-size",
-            "800",
-            "400",
-            "--icon-size",
-            "80",
-            "--icon",
-            f"{self.app_name}.app",
-            "300",
-            "36",
-            "--hide-extension",
-            f"{self.app_name}.app",
-            "--app-drop-link",
-            "500",
-            "36",
-            f"dist/{self.app_name}.dmg",
-            f"dist/{self.app_name}.app",
-        ]
+        if self._run_command(["create-dmg", "--version"], error_msg=None):
+            cmd = [
+                "create-dmg",
+                "--volname",
+                self.app_name,
+                "--volicon",
+                "resources/Img/MDCx.icns",
+                "--window-pos",
+                "200",
+                "120",
+                "--window-size",
+                "800",
+                "400",
+                "--icon-size",
+                "80",
+                "--icon",
+                f"{self.app_name}.app",
+                "300",
+                "36",
+                "--hide-extension",
+                f"{self.app_name}.app",
+                "--app-drop-link",
+                "500",
+                "36",
+                f"dist/{self.app_name}.dmg",
+                f"dist/{self.app_name}.app",
+            ]
 
-        # 重试机制：解决 GitHub Actions macOS runner 中的 "Resource busy" 问题
-        # 参考: https://github.com/actions/runner-images/issues/7522
-        max_tries = 10
-        for attempt in range(1, max_tries + 1):
-            if attempt > 1:
-                logger.warning(f"重试创建 DMG 文件 (尝试 {attempt}/{max_tries})...")
-                time.sleep(2)  # 等待 2 秒后重试
+            # 重试机制：解决 GitHub Actions macOS runner 中的 "Resource busy" 问题
+            # 参考: https://github.com/actions/runner-images/issues/7522
+            max_tries = 10
+            for attempt in range(1, max_tries + 1):
+                if attempt > 1:
+                    logger.warning(f"重试创建 DMG 文件 (尝试 {attempt}/{max_tries})...")
+                    time.sleep(2)  # 等待 2 秒后重试
 
-            result = self._run_command(cmd, error_msg=None)
-            if result is not False:
-                logger.info(f"✅ DMG 文件创建成功! 耗时: {int(time.time() - dmg_start)}秒")
-                break
+                result = self._run_command(cmd, error_msg=None)
+                if result is not False:
+                    logger.info(f"✅ DMG 文件创建成功! 耗时: {int(time.time() - dmg_start)}秒")
+                    break
+            else:
+                raise BuildError(f"DMG 文件创建失败: 重试 {max_tries} 次后仍然失败")
         else:
-            raise BuildError(f"DMG 文件创建失败: 重试 {max_tries} 次后仍然失败")
+            self._create_dmg_with_hdiutil()
+            logger.info(f"✅ DMG 文件创建成功(hdiutil)! 耗时: {int(time.time() - dmg_start)}秒")
 
         # 验证DMG文件
         dmg_path = Path(f"dist/{self.app_name}.dmg")
@@ -253,6 +257,49 @@ class BuildManager:
         with suppress(Exception):
             dmg_size = dmg_path.stat().st_size
             logger.info(f"大小: {dmg_size >> 20:.1f} MB")
+
+    def _create_dmg_with_hdiutil(self):
+        """使用 hdiutil 创建 DMG，并在镜像中提供 Applications 快捷方式"""
+        app_path = Path(f"dist/{self.app_name}.app")
+        dmg_path = Path(f"dist/{self.app_name}.dmg")
+        stage_dir = Path("dist/.dmg-stage")
+
+        if not app_path.exists():
+            raise BuildError(f"应用不存在，无法打包 DMG: {app_path}")
+
+        if stage_dir.exists():
+            shutil.rmtree(stage_dir)
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        staged_app = stage_dir / f"{self.app_name}.app"
+        shutil.copytree(app_path, staged_app, symlinks=True)
+
+        applications_link = stage_dir / "Applications"
+        if applications_link.exists() or applications_link.is_symlink():
+            applications_link.unlink()
+        os.symlink("/Applications", applications_link)
+
+        # 删除旧 DMG，避免 hdiutil 因文件存在报错
+        if dmg_path.exists():
+            dmg_path.unlink()
+
+        cmd = [
+            "hdiutil",
+            "create",
+            "-volname",
+            self.app_name,
+            "-srcfolder",
+            str(stage_dir),
+            "-ov",
+            "-format",
+            "UDZO",
+            str(dmg_path),
+        ]
+        try:
+            self._run_command(cmd, error_msg="hdiutil 创建 DMG 失败")
+        finally:
+            if stage_dir.exists():
+                shutil.rmtree(stage_dir, ignore_errors=True)
 
     def _cleanup(self):
         """清理临时文件"""
