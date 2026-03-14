@@ -127,8 +127,10 @@ class AsyncWebClient:
                         stream=stream,
                         allow_redirects=allow_redirects,
                     )
-                    # 检查响应状态
-                    if resp.status_code >= 300 and not (resp.status_code == 302 and resp.headers.get("Location")):
+                    # 检查响应状态:
+                    # 对于 3xx 且带 Location 的响应，视为“可达”，由上层决定是否继续跟随重定向。
+                    is_redirect_with_location = 300 <= resp.status_code < 400 and bool(resp.headers.get("Location"))
+                    if resp.status_code >= 300 and not is_redirect_with_location:
                         error_msg = f"HTTP {resp.status_code}"
                         retry = resp.status_code in (
                             408,  # Request Timeout

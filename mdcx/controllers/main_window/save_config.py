@@ -1,7 +1,6 @@
 import platform
 import re
 import traceback
-from contextlib import suppress
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -632,9 +631,13 @@ def save_config(self: "MyMAinWindow"):
         site = Website(site)
         url = self.Ui.lineEdit_site_custom_url.text().strip("/ ")
         use_browser = self.Ui.checkBox_site_use_browser.isChecked()
+        if url and not re.match(r"^https?://", url, flags=re.IGNORECASE):
+            url = f"https://{url}"
         if url:
-            with suppress(ValidationError):
+            try:
                 manager.config.site_configs.setdefault(site, SiteConfig()).custom_url = HttpUrl(url)
+            except ValidationError:
+                signal_qt.show_log_text(f"⚠️ {site.value} 自定义网址格式错误，已忽略：{url}")
         elif site in manager.config.site_configs:
             manager.config.site_configs[site].custom_url = None
         manager.config.site_configs.setdefault(site, SiteConfig()).use_browser = use_browser

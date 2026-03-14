@@ -17,6 +17,27 @@ def get_text_sync(
     )
 
 
+def request_sync(
+    method: str,
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    cookies: dict[str, str] | None = None,
+    use_proxy=True,
+    allow_redirects: bool = True,
+):
+    return executor.run(
+        manager.computed.async_client.request(
+            method,
+            url,
+            headers=headers,
+            cookies=cookies,
+            use_proxy=use_proxy,
+            allow_redirects=allow_redirects,
+        )
+    )
+
+
 def get_json_sync(
     url: str,
     *,

@@ -66,11 +66,13 @@ def load_config(self: "MyMAinWindow"):
         "wanted": CrawlerResultFields.WANTED,
     }
 
-    # 若上次因异常切到了 _failed.json, 启动时优先尝试恢复到同目录 config.json
+    # 若上次因异常切到了 _failed.json, 启动时优先恢复到同目录内可用的正常配置文件。
     if manager.path.name == "_failed.json":
-        config_json_path = manager.data_folder / "config.json"
-        if config_json_path.is_file():
-            manager.path = config_json_path
+        available_configs = sorted(
+            f for f in manager.list_configs() if f not in {"_failed.json"} and f.endswith((".json", ".ini"))
+        )
+        if available_configs:
+            manager.path = manager.data_folder / available_configs[0]
 
     errors = manager.load()
     v1_msgs = [e for e in errors if e.startswith("[V1]")]
@@ -104,8 +106,9 @@ def load_config(self: "MyMAinWindow"):
         self.Ui.comboBox_change_config.addItems(all_config_files)
         if config_file in all_config_files:
             self.Ui.comboBox_change_config.setCurrentIndex(all_config_files.index(config_file))
-        else:
-            self.Ui.comboBox_change_config.setCurrentIndex(all_config_files.index("config.json"))
+        elif all_config_files:
+            preferred = next((f for f in all_config_files if f != "_failed.json"), all_config_files[0])
+            self.Ui.comboBox_change_config.setCurrentIndex(all_config_files.index(preferred))
 
         # region media
         # 视频目录
@@ -959,6 +962,7 @@ def load_config(self: "MyMAinWindow"):
             self.Ui.lineEdit_site_custom_url.setText(manager.config.get_site_url(Website(site)))
             site_config = manager.config.get_site_config(Website(site))
             self.Ui.checkBox_site_use_browser.setChecked(site_config.use_browser)
+            self._custom_site_current = Website(site).value
 
         self.Ui.lineEdit_api_token_theporndb.setText(manager.config.theporndb_api_token)
         # javdb cookie

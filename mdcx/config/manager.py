@@ -12,7 +12,11 @@ from .v1 import ConfigV1, load_v1
 class ConfigManager:
     def __init__(self):
         if not MARK_FILE.is_file():  # 标记文件不存在
-            self.path = MAIN_PATH / "config.json"  # 默认配置文件路径
+            available_configs = sorted(
+                f for f in MAIN_PATH.iterdir() if f.suffix in (".json", ".ini") and f.name != "_failed.json"
+            )
+            # 优先使用目录内已有配置；首次运行无配置时再创建默认配置。
+            self.path = available_configs[0] if available_configs else MAIN_PATH / "config.json"
         else:
             self._path = Path(self.read_mark_file())
             self.data_folder, self.file = self._path.parent, self._path.name

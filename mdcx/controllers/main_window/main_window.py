@@ -5,9 +5,11 @@ import threading
 import time
 import traceback
 import webbrowser
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, cast
 
+from pydantic import HttpUrl, ValidationError
 from PyQt5.QtCore import QEvent, QPoint, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QCursor, QHoverEvent, QIcon, QKeySequence
 from PyQt5.QtWidgets import (
@@ -34,7 +36,7 @@ from mdcx.base.file import (
 from mdcx.base.image import add_del_extrafanart_copy
 from mdcx.base.video import add_del_extras, add_del_theme_videos
 from mdcx.base.web import check_theporndb_api_token, check_version, ping_host
-from mdcx.base.web_sync import get_text_sync
+from mdcx.base.web_sync import get_text_sync, request_sync
 from mdcx.config.enums import NfoInclude, Switch, Website
 from mdcx.config.extend import deal_url, get_movie_path_setting
 from mdcx.config.manager import manager
@@ -1573,8 +1575,19 @@ class MyMAinWindow(QMainWindow):
             return
         p = Path(p)
         if p.is_dir() and p != manager.data_folder:
-            manager.list_configs()
-            config_path = p / "config.json"
+            current_name = self.Ui.comboBox_change_config.currentText().strip() or manager.file
+            if current_name == "_failed.json":
+                current_name = ""
+            existed_configs = sorted(
+                f.name for f in p.iterdir() if f.suffix in (".json", ".ini") and f.name != "_failed.json"
+            )
+            if current_name and (p / current_name).is_file():
+                config_path = p / current_name
+            elif existed_configs:
+                config_path = p / existed_configs[0]
+            else:
+                create_name = current_name or (manager.file if manager.file != "_failed.json" else "default.json")
+                config_path = p / create_name
             manager.path = config_path
             if config_path.is_file():
                 temp_dark = self.dark_mode
@@ -1862,13 +1875,52 @@ class MyMAinWindow(QMainWindow):
         mark_size = self.Ui.horizontalSlider_mark_size.value()
         self.Ui.lcdNumber_mark_size.display(mark_size)
 
+    def _sync_custom_website_to_config(self, site_name: str | None = None, *, show_error: bool = False) -> bool:
+        """将“网站设置-自定义网址”当前输入同步到内存配置."""
+        if not site_name:
+            site_name = self.Ui.comboBox_custom_website.currentText()
+        site_name = str(site_name).strip()
+        if site_name not in Website:
+            return False
+
+        site = Website(site_name)
+        raw_url = self.Ui.lineEdit_site_custom_url.text().strip("/ ").strip()
+        use_browser = self.Ui.checkBox_site_use_browser.isChecked()
+
+        site_config = manager.config.site_configs.get(site)
+        if site_config is None:
+            site_config = manager.config.get_site_config(site)
+            manager.config.site_configs[site] = site_config
+        site_config.use_browser = use_browser
+
+        if raw_url:
+            normalized_url = raw_url
+            if not re.match(r"^https?://", normalized_url, flags=re.IGNORECASE):
+                normalized_url = f"https://{normalized_url}"
+            try:
+                site_config.custom_url = HttpUrl(normalized_url)
+                return True
+            except ValidationError:
+                if show_error:
+                    signal_qt.show_log_text(f"⚠️ {site.value} 自定义网址格式错误，已忽略：{raw_url}")
+                return False
+
+        site_config.custom_url = None
+        return True
+
     # 设置-网络-网址设置-下拉框切换
     def switch_custom_website_change(self, site):
+        previous_site = getattr(self, "_custom_site_current", "")
+        if previous_site and previous_site in Website and previous_site != site:
+            # 切换站点前先暂存当前输入，避免只保存最后一个站点导致其它自定义域名丢失。
+            self._sync_custom_website_to_config(previous_site)
+
         if site not in Website:
             return
         site = Website(site)
         self.Ui.lineEdit_site_custom_url.setText(manager.config.get_site_url(site))
         self.Ui.checkBox_site_use_browser.setChecked(manager.config.get_site_config(site).use_browser)
+        self._custom_site_current = site.value
 
     # 切换配置
     def config_file_change(self, new_config_file: str):
@@ -1964,130 +2016,250 @@ class MyMAinWindow(QMainWindow):
             # 检测网络连通性
             signal_qt.show_net_info(" 开始检测网络连通性...")
 
-            net_info = {
-                "github": ["https://raw.githubusercontent.com", ""],
-                "iqqtv": ["https://iqq5.xyz", ""],
-                "freejavbt": ["https://freejavbt.com", ""],
-                "javbus": ["https://www.javbus.com", ""],
-                "javdb": ["https://javdb.com", ""],
-                "jav321": ["https://www.jav321.com", ""],
-                "javlibrary": ["https://www.javlibrary.com", ""],
-                "dmm": ["https://www.dmm.co.jp", ""],
-                "mgstage": ["https://www.mgstage.com", ""],
-                "getchu": ["http://www.getchu.com", ""],
-                "theporndb": ["https://api.theporndb.net", ""],
-                "xcity": ["https://xcity.jp", ""],
-                "7mmtv": ["https://7mmtv.sx", ""],
-                "mdtv": ["https://www.mdpjzip.xyz", ""],
-                "madouqu": ["https://madouqu.com", ""],
-                "cnmdb": ["https://cnmdb.net", ""],
-                "hscangku": ["https://hscangku.net", ""],
-                "cableav": ["https://cableav.tv", ""],
-                "lulubar": ["https://lulubar.co", ""],
-                "fc2": ["https://adult.contents.fc2.com", ""],
-                "fc2hub": ["https://javten.com", ""],
-                "av-wiki": ["https://av-wiki.net", ""],
-                "seesaawiki": ["https://seesaawiki.jp", ""],
-                "mywife": ["https://mywife.cc", ""],
-                "giga": ["https://www.giga-web.jp", ""],
-                "kin8": ["https://www.kin8tengoku.com", ""],
-                "fantastica": ["http://fantastica-vr.com", ""],
-                "dahlia": ["https://dahlia-av.jp", ""],
-                "s1s1s1": ["https://s1s1s1.com", ""],
-                "moodyz": ["https://moodyz.com", ""],
-                "madonna": ["https://www.madonna-av.com", ""],
-                "wanz-factory": ["https://www.wanz-factory.com", ""],
-                "ideapocket": ["https://ideapocket.com", ""],
-                "kirakira": ["https://kirakira-av.com", ""],
-                "ebody": ["https://www.av-e-body.com", ""],
-                "bi-av": ["https://bi-av.com", ""],
-                "premium": ["https://premium-beauty.com", ""],
-                "miman": ["https://miman.jp", ""],
-                "tameikegoro": ["https://tameikegoro.jp", ""],
-                "fitch": ["https://fitch-av.com", ""],
-                "kawaiikawaii": ["https://kawaiikawaii.jp", ""],
-                "attackers": ["https://attackers.net", ""],
-                "dasdas": ["https://dasdas.jp", ""],
-                "mvg": ["https://mvg.jp", ""],
-                "opera": ["https://av-opera.jp", ""],
-                "honnaka": ["https://honnaka.jp", ""],
-                "rookie": ["https://rookie-av.jp", ""],
-                "hajimekikaku": ["https://hajimekikaku.com", ""],
-                "hhh-av": ["https://hhh-av.com", ""],
+            # 统一规则：若存在自定义域名则优先使用自定义；否则使用内置默认域名。
+            site_default_urls: dict[Website, str] = {
+                Website.IQQTV: "https://iqq5.xyz",
+                Website.FREEJAVBT: "https://freejavbt.com",
+                Website.JAVBUS: "https://www.javbus.com",
+                Website.JAVDB: "https://javdb.com",
+                Website.JAV321: "https://www.jav321.com",
+                Website.JAVLIBRARY: "https://www.javlibrary.com",
+                Website.DMM: "https://www.dmm.co.jp",
+                Website.MGSTAGE: "https://www.mgstage.com",
+                Website.GETCHU: "http://www.getchu.com",
+                Website.THEPORNDB: "https://api.theporndb.net",
+                Website.XCITY: "https://xcity.jp",
+                Website.MMTV: "https://7mmtv.sx",
+                Website.MDTV: "https://www.mdpjzip.xyz",
+                Website.MADOUQU: "https://madouqu.com",
+                Website.CNMDB: "https://cnmdb.net",
+                Website.HSCANGKU: "https://hscangku.net",
+                Website.CABLEAV: "https://cableav.tv",
+                Website.LULUBAR: "https://lulubar.co",
+                Website.FC2: "https://adult.contents.fc2.com",
+                Website.FC2HUB: "https://javten.com",
+                Website.MYWIFE: "https://mywife.cc",
+                Website.GIGA: "https://www.giga-web.jp",
+                Website.KIN8: "https://www.kin8tengoku.com",
+                Website.FANTASTICA: "http://fantastica-vr.com",
+                Website.DAHLIA: "https://dahlia-av.jp",
             }
 
-            for website in Website:
-                if website.value in ManualConfig.DISABLED_WEBSITES:
+            extra_default_urls = {
+                "github": "https://raw.githubusercontent.com",
+                "av-wiki": "https://av-wiki.net",
+                "seesaawiki": "https://seesaawiki.jp",
+                "s1s1s1": "https://s1s1s1.com",
+                "moodyz": "https://moodyz.com",
+                "madonna": "https://www.madonna-av.com",
+                "wanz-factory": "https://www.wanz-factory.com",
+                "ideapocket": "https://ideapocket.com",
+                "kirakira": "https://kirakira-av.com",
+                "ebody": "https://www.av-e-body.com",
+                "bi-av": "https://bi-av.com",
+                "premium": "https://premium-beauty.com",
+                "miman": "https://miman.jp",
+                "tameikegoro": "https://tameikegoro.jp",
+                "fitch": "https://fitch-av.com",
+                "kawaiikawaii": "https://kawaiikawaii.jp",
+                "attackers": "https://attackers.net",
+                "dasdas": "https://dasdas.jp",
+                "mvg": "https://mvg.jp",
+                "opera": "https://av-opera.jp",
+                "honnaka": "https://honnaka.jp",
+                "rookie": "https://rookie-av.jp",
+                "hajimekikaku": "https://hajimekikaku.com",
+                "hhh-av": "https://hhh-av.com",
+            }
+
+            net_info: dict[str, list[str]] = {}
+            for site, default_url in site_default_urls.items():
+                if site.value in ManualConfig.DISABLED_WEBSITES:
                     continue
                 try:
-                    r = manager.config.get_site_url(website)
+                    final_url = manager.config.get_site_url(site, default_url)
+                except Exception as e:
+                    signal_qt.show_net_info(f"   ⚠️{site.value} 读取自定义网址失败: {e}")
+                    final_url = default_url
+                if final_url.rstrip("/") != default_url.rstrip("/"):
+                    signal_qt.show_net_info(f"   ⚠️{site.value} 使用自定义网址：{final_url}")
+                net_info[site.value] = [final_url, ""]
+
+            for name, default_url in extra_default_urls.items():
+                net_info[name] = [default_url, ""]
+
+            # 站点枚举可能比默认检测列表更新：若有自定义网址则动态补充到检测列表中。
+            for website in Website:
+                if website.value in ManualConfig.DISABLED_WEBSITES or website.value in net_info:
+                    continue
+                try:
+                    custom_url = manager.config.get_site_url(website)
                 except Exception as e:
                     signal_qt.show_net_info(f"   ⚠️{website.value} 读取自定义网址失败: {e}")
                     continue
-                if not r:
+                if not custom_url:
                     continue
-                signal_qt.show_net_info(f"   ⚠️{website} 使用自定义网址：{r}")
-                # 站点枚举可能比默认检测列表更新, 这里动态补充避免 KeyError 直接中断检测。
-                net_info.setdefault(website.value, [r, ""])[0] = r
+                signal_qt.show_net_info(f"   ⚠️{website.value} 使用自定义网址：{custom_url}")
+                net_info[website.value] = [custom_url, ""]
 
-            net_info["javdb"][0] += "/v/D16Q5?locale=zh"
-            net_info["seesaawiki"][0] += "/av_neme/d/%C9%F1%A5%EF%A5%A4%A5%D5"
-            net_info["javlibrary"][0] += "/cn/?v=javme2j2tu"
-            net_info["kin8"][0] += "/moviepages/3681/index.html"
+            append_paths = {
+                "javdb": "/v/D16Q5?locale=zh",
+                "seesaawiki": "/av_neme/d/%C9%F1%A5%EF%A5%A4%A5%D5",
+                "javlibrary": "/cn/?v=javme2j2tu",
+                "kin8": "/moviepages/3681/index.html",
+            }
+            for site_name, suffix in append_paths.items():
+                if site_name in net_info:
+                    net_info[site_name][0] = net_info[site_name][0].rstrip("/") + suffix
 
-            for name, each in net_info.items():
-                host_address = each[0].replace("https://", "").replace("http://", "").split("/")[0]
+            def _http_limited_message(name: str, error_text: str) -> str | None:
+                if not error_text:
+                    return None
+                m = re.search(r"HTTP\s*(\d{3})", error_text, flags=re.IGNORECASE)
+                if not m:
+                    return None
+                code = int(m.group(1))
+                if code == 403 and name in {"javlibrary", "iqqtv"}:
+                    return f"⚠️ 网站可访问，但需 Cloudflare 验证（HTTP {code}）"
+                if code in {301, 302, 303, 307, 308}:
+                    return f"⚠️ 网站可访问，但发生重定向（HTTP {code}）"
+                if code in {400, 401, 403, 405, 406, 409, 410, 429, 451, 500, 502, 503, 504}:
+                    return f"⚠️ 网站可访问，但请求受限（HTTP {code}）"
+                return None
+
+            def _check_site_page(name: str, url: str, *, use_proxy: bool = True) -> str:
+                host_address = url.replace("https://", "").replace("http://", "").split("/")[0]
+                response, error = request_sync("GET", url, use_proxy=use_proxy, allow_redirects=False)
+                status_code = response.status_code if response is not None else None
+                html_content = None
+                redirect_location = ""
+                if response is not None:
+                    redirect_location = response.headers.get("Location", "")
+                    try:
+                        html_content = response.text
+                    except Exception:
+                        html_content = ""
+
+                # 代理开启时，若代理链路失败，额外尝试直连，避免“浏览器可访问但检测失败”的误判。
+                used_direct_fallback = False
+                if response is None and use_proxy and manager.config.use_proxy:
+                    response_direct, error_direct = request_sync("GET", url, use_proxy=False, allow_redirects=False)
+                    if response_direct is not None:
+                        status_code = response_direct.status_code
+                        redirect_location = response_direct.headers.get("Location", "")
+                        try:
+                            html_content = response_direct.text
+                        except Exception:
+                            html_content = ""
+                        error = ""
+                        used_direct_fallback = True
+                    elif limited_msg := _http_limited_message(name, error_direct):
+                        return f"{limited_msg}{ping_host(host_address)}（直连）"
+
+                if status_code is not None and 300 <= status_code < 400:
+                    jump_to = redirect_location or "(空)"
+                    msg = f"⚠️ 网站可访问，但发生重定向（HTTP {status_code} -> {jump_to}）{ping_host(host_address)}"
+                    if used_direct_fallback:
+                        msg = msg.replace("⚠️ 网站可访问", "⚠️ 直连可访问（代理链路失败）", 1)
+                    return msg
+
+                if status_code is None:
+                    # 某些站点 GET 可能因页面体积或挑战页导致超时，额外用 HEAD 快速探测可达性。
+                    if "连接超时" in str(error):
+                        response_head, error_head = request_sync(
+                            "HEAD", url, use_proxy=use_proxy, allow_redirects=False
+                        )
+                        if response_head is not None:
+                            status_code = response_head.status_code
+                            redirect_location = response_head.headers.get("Location", "")
+                            html_content = ""
+                            error = ""
+                        elif use_proxy and manager.config.use_proxy:
+                            response_head_direct, error_head_direct = request_sync(
+                                "HEAD", url, use_proxy=False, allow_redirects=False
+                            )
+                            if response_head_direct is not None:
+                                status_code = response_head_direct.status_code
+                                redirect_location = response_head_direct.headers.get("Location", "")
+                                html_content = ""
+                                error = ""
+                                used_direct_fallback = True
+                            elif limited_msg := _http_limited_message(name, error_head_direct):
+                                return f"{limited_msg}{ping_host(host_address)}（HEAD直连）"
+                        if status_code is None and (limited_msg := _http_limited_message(name, error_head)):
+                            return f"{limited_msg}{ping_host(host_address)}（HEAD）"
+
+                    if limited_msg := _http_limited_message(name, error):
+                        return f"{limited_msg}{ping_host(host_address)}"
+                    return "❌ 连接失败 请检查网络或代理设置！ " + str(error)
+
+                html_lower = (html_content or "").lower()
+                if "cloudflare" in html_lower or "cf-ray" in html_lower or "attention required" in html_lower:
+                    msg = f"⚠️ 可访问，但触发 Cloudflare 风控{ping_host(host_address)}"
+                elif name == "dmm" and re.findall("このページはお住まいの地域からご利用になれません", html_content):
+                    msg = "⚠️ 可访问，但有地域限制，请使用日本节点访问！"
+                elif name == "mgstage" and not html_content.strip():
+                    msg = "⚠️ 可访问，但返回空内容（可能地域限制）"
+                else:
+                    msg = f"✅ 连接正常{ping_host(host_address)}"
+
+                if used_direct_fallback and msg.startswith("✅"):
+                    msg = msg.replace("✅ 连接正常", "⚠️ 直连正常（代理链路失败）", 1)
+                return msg
+
+            def _check_single_site(name: str, url: str) -> str:
+                host_address = url.replace("https://", "").replace("http://", "").split("/")[0]
                 if name == "javdb":
                     res_javdb = self._check_javdb_cookie()
-                    each[1] = res_javdb.replace("✅ 连接正常", f"✅ 连接正常{ping_host(host_address)}")
-                elif name == "javbus":
+                    return res_javdb.replace("✅ 连接正常", f"✅ 连接正常{ping_host(host_address)}")
+                if name == "javbus":
                     res_javbus = self._check_javbus_cookie()
-                    each[1] = res_javbus.replace("✅ 连接正常", f"✅ 连接正常{ping_host(host_address)}")
-                elif name == "theporndb":
+                    return res_javbus.replace("✅ 连接正常", f"✅ 连接正常{ping_host(host_address)}")
+                if name == "theporndb":
                     res_theporndb = check_theporndb_api_token()
-                    each[1] = res_theporndb.replace("✅ 连接正常", f"✅ 连接正常{ping_host(host_address)}")
-                elif name == "javlibrary":
+                    return res_theporndb.replace("✅ 连接正常", f"✅ 连接正常{ping_host(host_address)}")
+                if name == "javlibrary":
                     use_proxy = True
                     if manager.config.get_site_url(Website.JAVLIBRARY):
                         use_proxy = False
-                    html_info, error = get_text_sync(each[0], use_proxy=use_proxy)
-                    if html_info is None:
-                        each[1] = "❌ 连接失败 请检查网络或代理设置！ " + error
-                    elif "Cloudflare" in html_info:
-                        each[1] = "❌ 连接失败 (被 Cloudflare 5 秒盾拦截！)"
-                    else:
-                        each[1] = f"✅ 连接正常{ping_host(host_address)}"
-                elif name in ["freejavbt", "madouqu", "7mmtv"]:
-                    html_info, error = get_text_sync(each[0])
-                    if html_info is None:
-                        each[1] = "❌ 连接失败 请检查网络或代理设置！ " + error
-                    elif "Cloudflare" in html_info:
-                        each[1] = "❌ 连接失败 (被 Cloudflare 5 秒盾拦截！)"
-                    else:
-                        each[1] = f"✅ 连接正常{ping_host(host_address)}"
-                else:
+                    return _check_site_page(name, url, use_proxy=use_proxy)
+                return _check_site_page(name, url, use_proxy=True)
+
+            ordered_sites = list(net_info.keys())
+            total_sites = len(ordered_sites)
+            # 并发检测：大幅降低“总耗时=所有站点超时之和”的问题。
+            max_workers = min(10, max(4, manager.config.thread_number * 2), total_sites) if total_sites else 1
+            signal_qt.show_net_info(f"   ⏳ 并发检测中... 站点数: {total_sites}，并发: {max_workers}")
+            results: dict[str, str] = {}
+
+            if total_sites <= 1:
+                for name in ordered_sites:
+                    url = net_info[name][0]
                     try:
-                        html_content, error = get_text_sync(each[0])
-                        if html_content is None:
-                            each[1] = "❌ 连接失败 请检查网络或代理设置！ " + str(error)
-                        else:
-                            if name == "dmm":
-                                if re.findall("このページはお住まいの地域からご利用になれません", html_content):
-                                    each[1] = "❌ 连接失败 地域限制, 请使用日本节点访问！"
-                                else:
-                                    each[1] = f"✅ 连接正常{ping_host(host_address)}"
-                            elif name == "mgstage":
-                                if not html_content.strip():
-                                    each[1] = "❌ 连接失败 地域限制, 请使用日本节点访问！"
-                                else:
-                                    each[1] = f"✅ 连接正常{ping_host(host_address)}"
-                            else:
-                                each[1] = f"✅ 连接正常{ping_host(host_address)}"
+                        results[name] = _check_single_site(name, url)
                     except Exception as e:
-                        each[1] = "测试连接时出现异常！信息:" + str(e)
+                        results[name] = "测试连接时出现异常！信息:" + str(e)
                         signal_qt.show_traceback_log(traceback.format_exc())
-                        signal_qt.show_net_info(traceback.format_exc())
-                signal_qt.show_net_info("   " + name.ljust(12) + each[1])
+            else:
+                with ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="mdcx-netcheck") as pool:
+                    future_to_name = {
+                        pool.submit(_check_single_site, name, net_info[name][0]): name for name in ordered_sites
+                    }
+                    completed = 0
+                    for future in as_completed(future_to_name):
+                        name = future_to_name[future]
+                        completed += 1
+                        try:
+                            results[name] = future.result()
+                        except Exception as e:
+                            results[name] = "测试连接时出现异常！信息:" + str(e)
+                            signal_qt.show_traceback_log("".join(traceback.format_exception(type(e), e, e.__traceback__)))
+                        if completed == total_sites or completed % 6 == 0:
+                            signal_qt.show_net_info(f"   ⏳ 检测进度: {completed}/{total_sites}")
+
+            for name in ordered_sites:
+                net_info[name][1] = results.get(name, "测试连接时出现异常！信息: 无结果")
+                signal_qt.show_net_info("   " + name.ljust(12) + net_info[name][1])
             signal_qt.show_net_info(f"\n🎉 网络检测已完成！用时 {get_used_time(start_time)} 秒！")
             signal_qt.show_net_info(
                 "================================================================================\n"
@@ -2115,6 +2287,8 @@ class MyMAinWindow(QMainWindow):
     # 网络检查
     def pushButton_check_net_clicked(self):
         if self.Ui.pushButton_check_net.text() == "开始检测":
+            # 先同步当前自定义网址输入，避免检测仍使用旧默认域名。
+            self._sync_custom_website_to_config(show_error=True)
             self.Ui.pushButton_check_net.setText("停止检测")
             self.Ui.pushButton_check_net.setStyleSheet(
                 "QPushButton#pushButton_check_net{color: white;background-color: rgba(230, 36, 0, 250);}QPushButton:hover#pushButton_check_net{color: white;background-color: rgba(247, 36, 0, 250);}QPushButton:pressed#pushButton_check_net{color: white;background-color: rgba(180, 0, 0, 250);}"
