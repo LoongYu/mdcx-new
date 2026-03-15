@@ -479,6 +479,7 @@ class ManualConfig:
         "javbus": Website.JAVBUS,
         "javdb": Website.JAVDB,
         "javlibrary": Website.JAVLIBRARY,
+        "madou.com": Website.MADOU,
         "mdtv": Website.MDTV,
         "mdpjzip": Website.MDTV,
         "madouqu": Website.MADOUQU,

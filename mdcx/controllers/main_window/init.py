@@ -105,12 +105,19 @@ def Init_Ui(self: "MyMAinWindow"):
     self.Ui.pushButton_scraper_failed_list.hide()
     self.Ui.pushButton_save_failed_list.hide()
     hidden_sites = set(ManualConfig.DISABLED_WEBSITES)
-    self.Ui.comboBox_custom_website.addItems([w for w in ManualConfig.SUPPORTED_WEBSITES if w not in hidden_sites])
-    # 历史原因保留枚举兼容, 但在 UI 中隐藏已停用站点。
-    for combo in (self.Ui.comboBox_website_all, self.Ui.comboBox_custom_website):
+
+    def sync_site_combo(combo):
+        existing = [combo.itemText(i) for i in range(combo.count())]
+        for site in ManualConfig.SUPPORTED_WEBSITES:
+            if site not in hidden_sites and site not in existing:
+                combo.addItem(site)
+        # 历史原因保留枚举兼容, 但在 UI 中隐藏已停用站点。
         for site in hidden_sites:
             while (idx := combo.findText(site)) >= 0:
                 combo.removeItem(idx)
+
+    for combo in (self.Ui.comboBox_website_all, self.Ui.comboBox_custom_website):
+        sync_site_combo(combo)
     # 强制 Cookie 输入框保持从左到右、左对齐显示，避免在部分环境出现“内容靠右/左侧空白”。
     def configure_cookie_input(text_edit: QPlainTextEdit):
         text_edit.setLayoutDirection(Qt.LeftToRight)

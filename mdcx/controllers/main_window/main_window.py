@@ -42,7 +42,7 @@ from mdcx.config.extend import deal_url, get_movie_path_setting
 from mdcx.config.manager import manager
 from mdcx.config.resources import resources
 from mdcx.consts import GITHUB_ISSUES_NEW_URL, GITHUB_RELEASES_URL, IS_WINDOWS, LOCAL_VERSION
-from mdcx.core.nfo import write_nfo
+from mdcx.core.file import get_output_name, rename_output_by_current_config
 from mdcx.core.scraper import again_search, get_remain_list, start_new_scrape
 from mdcx.image import get_pixmap
 from mdcx.manual import ManualConfig
@@ -56,7 +56,16 @@ from mdcx.tools.emby_actor_image import update_emby_actor_photo
 from mdcx.tools.emby_actor_info import creat_kodi_actors, show_emby_actor_list, update_emby_actor_info
 from mdcx.tools.missing import check_missing_number
 from mdcx.tools.subtitle import add_sub_for_all_video
-from mdcx.utils import _async_raise, add_html, executor, get_current_time, get_used_time, kill_a_thread, split_path
+from mdcx.utils import (
+    _async_raise,
+    add_html,
+    clean_list,
+    executor,
+    get_current_time,
+    get_used_time,
+    kill_a_thread,
+    split_path,
+)
 from mdcx.utils.file import delete_file_sync, open_file_thread
 from mdcx.views.MDCx import Ui_MDCx
 
@@ -1018,7 +1027,7 @@ class MyMAinWindow(QMainWindow):
                 "输入网址重新刮削",
                 f"文件名: {main_file_name}\n支持网站:dmm、getchu、fc2"
                 f"、fc2hub、iqqtv、jav321、javbus、javdb、freejavbt、javlibrary、mdtv"
-                f"、madouqu、mgstage、7mmtv、xcity、mywife、giga、dahlia、fantastica"
+                f"、madou、madouqu、mgstage、7mmtv、xcity、mywife、giga、dahlia、fantastica"
                 f"、hdouban、lulubar、cnmdb、theporndb、kin8\n请输入番号对应的网址（不是网站首页地址！！！是番号页面地址！！！）:",
             )
             if ok and text:
@@ -1130,12 +1139,11 @@ class MyMAinWindow(QMainWindow):
             show_data = self.json_array[self.now_show_name]
             json_data = show_data.data
             file_info = show_data.file_info
-            nfo_path = file_info.file_path.with_suffix(".nfo")
-            nfo_folder = nfo_path.parent
             json_data.number = self.Ui.lineEdit_nfo_number.text()
+            actor_text = clean_list(self.Ui.lineEdit_nfo_actor.text().replace("，", ","))
             if NfoInclude.ACTOR_ALL in manager.config.nfo_include_new:
-                json_data.all_actor = self.Ui.lineEdit_nfo_actor.text()
-            json_data.actor = self.Ui.lineEdit_nfo_actor.text()
+                json_data.all_actor = actor_text
+            json_data.actor = actor_text
             json_data.year = self.Ui.lineEdit_nfo_year.text()
             json_data.title = self.Ui.lineEdit_nfo_title.text()
             json_data.originaltitle = self.Ui.lineEdit_nfo_originaltitle.text()
@@ -1153,11 +1161,35 @@ class MyMAinWindow(QMainWindow):
             json_data.poster = self.Ui.lineEdit_nfo_poster.text()
             json_data.thumb = self.Ui.lineEdit_nfo_cover.text()
             json_data.trailer = self.Ui.lineEdit_nfo_trailer.text()
-            if executor.run(write_nfo(file_info, json_data, nfo_path, nfo_folder, update=True)):
-                self.Ui.label_save_tips.setText(f"已保存! {get_current_time()}")
+            ok, error, new_file_info, nfo_path = executor.run(rename_output_by_current_config(file_info, json_data))
+            if ok:
+                show_data.file_info = new_file_info
+                success_folder = get_movie_path_setting(new_file_info.file_path).success_folder
+                (
+                    _folder_new_path,
+                    _file_new_path,
+                    _nfo_new_path,
+                    _poster_new_path_with_filename,
+                    _thumb_new_path_with_filename,
+                    _fanart_new_path_with_filename,
+                    _naming_rule,
+                    poster_final_path,
+                    thumb_final_path,
+                    fanart_final_path,
+                ) = get_output_name(new_file_info, json_data, success_folder, new_file_info.file_ex)
+                show_data.other.poster_path = poster_final_path if poster_final_path.is_file() else None
+                show_data.other.thumb_path = thumb_final_path if thumb_final_path.is_file() else None
+                show_data.other.fanart_path = fanart_final_path if fanart_final_path.is_file() else None
+                if self.show_data is show_data:
+                    self.show_data = show_data
                 self.set_main_info(show_data)
+                self._show_nfo_info()
+                rename_info = ""
+                if str(new_file_info.file_path).lower() != str(file_info.file_path).lower():
+                    rename_info = "，并已同步更新命名"
+                self.Ui.label_save_tips.setText(f"已保存{rename_info}! {get_current_time()}\n{nfo_path}")
             else:
-                self.Ui.label_save_tips.setText(f"保存失败! {get_current_time()}")
+                self.Ui.label_save_tips.setText(f"保存失败! {get_current_time()}\n{error}")
         except Exception:
             if not signal_qt.stop:
                 signal_qt.show_traceback_log(traceback.format_exc())
@@ -1662,6 +1694,7 @@ class MyMAinWindow(QMainWindow):
   <li>javlibrary</li>
   <li>kin8</li>
   <li>lulubar</li>
+  <li>madou</li>
   <li>madouqu</li>
   <li>mdtv</li>
   <li>mgstage</li>
@@ -1674,7 +1707,7 @@ class MyMAinWindow(QMainWindow):
   <li>official</li>
   <p><span style=" font-weight:700;">指定类型影片可指定刮削网站:<span></p>
   <p>· 欧美：theporndb </p>
-  <p>· 国产：mdtv、madouqu、hdouban、cnmdb</p>
+  <p>· 国产：madou、mdtv、madouqu、hdouban、cnmdb、javday</p>
   <p>· 里番：getchu_dmm </p>
   <p>· Mywife：mywife </p>
   <p>· GIGA：giga </p>
@@ -2030,6 +2063,7 @@ class MyMAinWindow(QMainWindow):
                 Website.THEPORNDB: "https://api.theporndb.net",
                 Website.XCITY: "https://xcity.jp",
                 Website.MMTV: "https://7mmtv.sx",
+                Website.MADOU: "https://madou.com",
                 Website.MDTV: "https://www.mdpjzip.xyz",
                 Website.MADOUQU: "https://madouqu.com",
                 Website.CNMDB: "https://cnmdb.net",

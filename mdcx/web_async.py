@@ -14,6 +14,43 @@ from curl_cffi.requests.session import HttpMethod
 from curl_cffi.requests.utils import not_set
 from PIL import Image
 
+_XOR_IMAGE_CDNS = {"imgwebsa.shzvsh.cn"}
+_XOR_IMAGE_KEY = b"2019ysapp7527"
+_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"}
+
+
+def _is_valid_image_bytes(content: bytes) -> bool:
+    try:
+        with Image.open(BytesIO(content)) as img:
+            img.verify()
+        return True
+    except Exception:
+        return False
+
+
+def _decode_xor_image_bytes(content: bytes, key: bytes = _XOR_IMAGE_KEY) -> bytes:
+    data = bytearray(content)
+    limit = min(100, len(data))
+    for index in range(limit):
+        data[index] ^= key[index % len(key)]
+    return bytes(data)
+
+
+def normalize_image_bytes(url: str, content: bytes | None) -> bytes | None:
+    if not content:
+        return None
+    if _is_valid_image_bytes(content):
+        return content
+    try:
+        host = httpx.URL(url).host or ""
+    except Exception:
+        host = ""
+    if host in _XOR_IMAGE_CDNS:
+        decoded = _decode_xor_image_bytes(content)
+        if _is_valid_image_bytes(decoded):
+            return decoded
+    return None
+
 
 class AsyncWebLimiters:
     def __init__(self):
@@ -316,8 +353,9 @@ class AsyncWebClient:
         file_size = await self.get_filesize(url, use_proxy=use_proxy)
         # 判断是不是webp文件
         webp = False
-        if file_path.suffix == "jpg" and ".webp" in url:
+        if file_path.suffix.lower() in {".jpg", ".jpeg"} and ".webp" in url:
             webp = True
+        is_image_target = file_path.suffix.lower() in _IMAGE_SUFFIXES
 
         MB = 1024**2
         # 2 MB 以上使用分块下载, 不清楚为什么 webp 不分块, 可能是因为要转换成 jpg
@@ -328,6 +366,12 @@ class AsyncWebClient:
         if not content:
             self.log_fn(f"🔴 下载失败: {url} {error}")
             return False
+        if is_image_target:
+            normalized_content = normalize_image_bytes(url, content)
+            if normalized_content is None:
+                self.log_fn(f"🔴 图片解码失败: {url} {file_path}")
+                return False
+            content = normalized_content
         if not webp:
             try:
                 async with aiofiles.open(file_path, "wb") as f:

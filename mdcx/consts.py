@@ -2,7 +2,7 @@ import platform
 import sys
 from pathlib import Path
 
-LOCAL_VERSION = 22026031501
+LOCAL_VERSION = 22026031503
 GITHUB_REPO = "LoongYu/mdcx-new"
 GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
 GITHUB_ISSUES_NEW_URL = f"https://github.com/{GITHUB_REPO}/issues/new/choose"

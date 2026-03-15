@@ -1,13 +1,16 @@
+import asyncio
 import os
 import re
 import shutil
 import traceback
+from dataclasses import replace
 from pathlib import Path
 
 import aiofiles
 import aiofiles.os
 
 from ..base.number import remove_escape_string
+from ..config.extend import get_movie_path_setting
 from ..config.enums import CDChar, MarkType, Switch
 from ..config.manager import manager
 from ..consts import IS_MAC, IS_WINDOWS
@@ -395,6 +398,258 @@ def get_output_name(
         thumb_final_path,
         fanart_final_path,
     )
+
+
+def _unique_paths(paths: list[Path]) -> list[Path]:
+    result: list[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = str(path).lower()
+        if key not in seen:
+            seen.add(key)
+            result.append(path)
+    return result
+
+
+async def _ensure_parent_folder(path: Path) -> None:
+    if not await aiofiles.os.path.exists(path.parent):
+        await aiofiles.os.makedirs(path.parent)
+
+
+async def _move_directory_if_needed(old_path: Path, new_path: Path) -> tuple[bool, str]:
+    if str(old_path).lower() == str(new_path).lower():
+        return True, ""
+    if not await aiofiles.os.path.exists(old_path):
+        return True, ""
+    if await aiofiles.os.path.exists(new_path):
+        return True, ""
+    try:
+        await _ensure_parent_folder(new_path)
+        await asyncio.to_thread(shutil.move, str(old_path), str(new_path))
+        return True, ""
+    except Exception as e:
+        return False, f"移动目录失败: {old_path} -> {new_path}\n{e}"
+
+
+async def _normalize_file_candidates(candidates: list[Path], target: Path) -> tuple[bool, str]:
+    candidates = _unique_paths(candidates)
+    existing = [path for path in candidates if await aiofiles.os.path.exists(path)]
+    if await aiofiles.os.path.exists(target):
+        for path in existing:
+            if str(path).lower() != str(target).lower():
+                await delete_file_async(path)
+        return True, ""
+    if not existing:
+        return True, ""
+    source = existing[0]
+    if str(source).lower() != str(target).lower():
+        await _ensure_parent_folder(target)
+        ok, error = await move_file_async(source, target)
+        if not ok:
+            return False, error
+    for path in existing[1:]:
+        if str(path).lower() != str(target).lower():
+            await delete_file_async(path)
+    return True, ""
+
+
+async def _cleanup_empty_folder(folder: Path, stop_at: Path | None = None) -> None:
+    current = folder
+    stop_key = str(stop_at).lower() if stop_at else ""
+    while current != current.parent:
+        if stop_key and str(current).lower() == stop_key:
+            break
+        try:
+            if not await aiofiles.os.path.isdir(current):
+                break
+            if await aiofiles.os.listdir(current):
+                break
+            await aiofiles.os.rmdir(current)
+        except Exception:
+            break
+        current = current.parent
+
+
+async def collect_same_movie_file_infos(primary: FileInfo) -> list[FileInfo]:
+    media_ext = {str(ext).lower() for ext in manager.config.media_type}
+    folder = primary.file_path.parent
+    result = [primary]
+    if not await aiofiles.os.path.isdir(folder):
+        return result
+    try:
+        entries = sorted(await aiofiles.os.listdir(folder))
+    except Exception:
+        return result
+    for name in entries:
+        path = folder / name
+        if path == primary.file_path:
+            continue
+        if not await aiofiles.os.path.isfile(path):
+            continue
+        if path.suffix.lower() not in media_ext:
+            continue
+        info = await get_file_info_v2(path, copy_sub=False)
+        if info.number == primary.number:
+            result.append(info)
+    return result
+
+
+async def rename_output_by_current_config(
+    file_info: FileInfo,
+    json_data: CrawlersResult,
+    *,
+    rename_group: bool = True,
+) -> tuple[bool, str, FileInfo, Path]:
+    """
+    根据当前配置和编辑后的元数据，重命名/移动已刮削成功的视频及其关联资源。
+
+    返回：
+        ok, error, selected_file_info, selected_nfo_path
+    """
+    from .nfo import write_nfo
+
+    selected_source_path = file_info.file_path
+    movie_paths = get_movie_path_setting(selected_source_path)
+    success_folder = movie_paths.success_folder
+    group_infos = [file_info]
+    if rename_group:
+        group_infos = await collect_same_movie_file_infos(file_info)
+
+    plans = []
+    target_file_keys: set[str] = set()
+    source_file_keys = {str(info.file_path).lower() for info in group_infos}
+    for info in group_infos:
+        (
+            folder_new_path,
+            file_new_path,
+            nfo_new_path,
+            poster_new_path_with_filename,
+            thumb_new_path_with_filename,
+            fanart_new_path_with_filename,
+            naming_rule,
+            poster_final_path,
+            thumb_final_path,
+            fanart_final_path,
+        ) = get_output_name(info, json_data, success_folder, info.file_ex)
+        target_key = str(file_new_path).lower()
+        if target_key in target_file_keys:
+            return False, f"重命名后文件名冲突: {file_new_path}", file_info, nfo_new_path
+        target_file_keys.add(target_key)
+        if await aiofiles.os.path.exists(file_new_path) and target_key not in source_file_keys:
+            return False, f"目标文件已存在: {file_new_path}", file_info, nfo_new_path
+        plans.append(
+            {
+                "old_info": info,
+                "folder_new_path": folder_new_path,
+                "file_new_path": file_new_path,
+                "nfo_new_path": nfo_new_path,
+                "poster_final_path": poster_final_path,
+                "thumb_final_path": thumb_final_path,
+                "fanart_final_path": fanart_final_path,
+                "naming_rule": naming_rule,
+            }
+        )
+
+    for plan in plans:
+        await aiofiles.os.makedirs(plan["folder_new_path"], exist_ok=True)
+
+    selected_plan = next(plan for plan in plans if plan["old_info"].file_path == selected_source_path)
+    primary_old_folder = file_info.file_path.parent
+    primary_new_folder = selected_plan["folder_new_path"]
+    old_stem = file_info.file_path.stem
+
+    for plan in plans:
+        old_info: FileInfo = plan["old_info"]
+        old_file_path = old_info.file_path
+        new_file_path = plan["file_new_path"]
+        if str(old_file_path).lower() != str(new_file_path).lower():
+            ok, error = await move_file_async(old_file_path, new_file_path)
+            if not ok:
+                return False, error, file_info, plan["nfo_new_path"]
+
+        old_stem_each = old_file_path.stem
+        new_stem_each = new_file_path.stem
+        old_folder_each = old_file_path.parent
+
+        subtitle_candidates = [old_folder_each / f"{old_stem_each}{suffix}" for suffix in old_info.sub_list]
+        for old_sub_path in subtitle_candidates:
+            suffix = old_sub_path.name.removeprefix(old_stem_each)
+            new_sub_path = new_file_path.parent / f"{new_stem_each}{suffix}"
+            if str(old_sub_path).lower() != str(new_sub_path).lower() and await aiofiles.os.path.exists(old_sub_path):
+                ok, error = await move_file_async(old_sub_path, new_sub_path)
+                if not ok:
+                    return False, error, file_info, plan["nfo_new_path"]
+
+        for suffix_name, target_path in (
+            ("poster", plan["poster_final_path"]),
+            ("thumb", plan["thumb_final_path"]),
+            ("fanart", plan["fanart_final_path"]),
+        ):
+            ok, error = await _normalize_file_candidates(
+                [old_folder_each / f"{old_stem_each}-{suffix_name}.jpg"],
+                target_path,
+            )
+            if not ok:
+                return False, error, file_info, plan["nfo_new_path"]
+
+        if manager.config.trailer_simple_name:
+            pass
+        else:
+            old_trailer = old_folder_each / f"{old_stem_each}-trailer.mp4"
+            new_trailer = new_file_path.parent / f"{new_stem_each}-trailer.mp4"
+            if str(old_trailer).lower() != str(new_trailer).lower() and await aiofiles.os.path.exists(old_trailer):
+                ok, error = await move_file_async(old_trailer, new_trailer)
+                if not ok:
+                    return False, error, file_info, plan["nfo_new_path"]
+
+        ok, error = await _normalize_file_candidates([old_file_path.with_suffix(".nfo")], plan["nfo_new_path"])
+        if not ok:
+            return False, error, file_info, plan["nfo_new_path"]
+
+        temp_file_info = replace(
+            old_info,
+            file_path=new_file_path,
+            folder_path=new_file_path.parent,
+            file_name=new_file_path.stem,
+            file_show_name=new_file_path.stem,
+            file_show_path=new_file_path,
+        )
+        ok = await write_nfo(temp_file_info, json_data, plan["nfo_new_path"], plan["nfo_new_path"].parent, update=True)
+        if not ok:
+            return False, "写入 NFO 失败", file_info, plan["nfo_new_path"]
+
+    primary_assets = (
+        ("poster.jpg", primary_new_folder / "poster.jpg"),
+        ("thumb.jpg", primary_new_folder / "thumb.jpg"),
+        ("fanart.jpg", primary_new_folder / "fanart.jpg"),
+    )
+    for asset_name, target_path in primary_assets:
+        ok, error = await _normalize_file_candidates([primary_old_folder / asset_name], target_path)
+        if not ok:
+            return False, error, file_info, selected_plan["nfo_new_path"]
+
+    if manager.config.trailer_simple_name:
+        old_trailer = primary_old_folder / "trailers" / "trailer.mp4"
+        new_trailer = primary_new_folder / "trailers" / "trailer.mp4"
+        ok, error = await _normalize_file_candidates([old_trailer], new_trailer)
+        if not ok:
+            return False, error, file_info, selected_plan["nfo_new_path"]
+
+    for folder_name in ("extrafanart", manager.config.extrafanart_folder, "backdrops", "behind the scenes"):
+        if not folder_name:
+            continue
+        ok, error = await _move_directory_if_needed(primary_old_folder / folder_name, primary_new_folder / folder_name)
+        if not ok:
+            return False, error, file_info, selected_plan["nfo_new_path"]
+
+    new_selected_file_info = await get_file_info_v2(selected_plan["file_new_path"], copy_sub=False)
+    new_selected_file_info.definition = file_info.definition
+    new_selected_file_info.codec = file_info.codec
+
+    if primary_old_folder != primary_new_folder:
+        await _cleanup_empty_folder(primary_old_folder, stop_at=success_folder)
+
+    return True, "", new_selected_file_info, selected_plan["nfo_new_path"]
 
 
 async def get_file_info_v2(file_path: Path, copy_sub: bool = True) -> FileInfo:

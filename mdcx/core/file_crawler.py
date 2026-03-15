@@ -268,7 +268,7 @@ class FileScraper:
         title_language = self.config.get_field_config(CrawlerResultFields.TITLE).language
         org_language = title_language
 
-        if website not in [Website.IQQTV, Website.JAVLIBRARY, Website.MDTV, Website.MADOUQU, Website.LULUBAR]:
+        if website not in [Website.IQQTV, Website.JAVLIBRARY, Website.MADOU, Website.MDTV, Website.MADOUQU, Website.LULUBAR]:
             title_language = Language.JP
 
         elif website == Website.MDTV:

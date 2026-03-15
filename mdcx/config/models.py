@@ -344,7 +344,14 @@ class Config(BaseModel):
         title="欧美网站源",
     )
     website_guochan: list[Website] = Field(
-        default_factory=lambda: [Website.MADOUQU, Website.MDTV, Website.HDOUBAN, Website.CNMDB, Website.JAVDAY],
+        default_factory=lambda: [
+            Website.MADOU,
+            Website.MADOUQU,
+            Website.MDTV,
+            Website.HDOUBAN,
+            Website.CNMDB,
+            Website.JAVDAY,
+        ],
         title="国产网站源",
     )
 

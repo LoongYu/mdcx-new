@@ -23,6 +23,7 @@ from . import (
     javlibrary_new,
     kin8,
     lulubar,
+    madou,
     madouqu,
     mdtv,
     mgstage,
@@ -60,6 +61,7 @@ CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.JAVLIBRARY, javlibrary_new.main),  # lang
     (Website.KIN8, kin8.main),
     (Website.LULUBAR, lulubar.main),
+    (Website.MADOU, madou.main),
     (Website.MADOUQU, madouqu.main),
     (Website.MDTV, mdtv.main),
     (Website.MGSTAGE, mgstage.main),

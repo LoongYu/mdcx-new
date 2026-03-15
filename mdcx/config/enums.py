@@ -507,6 +507,7 @@ class Website(Enum):
     JAVLIBRARY = "javlibrary"
     KIN8 = "kin8"
     LULUBAR = "lulubar"
+    MADOU = "madou"
     MADOUQU = "madouqu"
     MDTV = "mdtv"
     MGSTAGE = "mgstage"
