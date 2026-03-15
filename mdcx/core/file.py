@@ -223,6 +223,7 @@ def _get_folder_path(success_folder: Path, file_info: FileInfo, res: CrawlersRes
         show_cnword,
         show_moword,
         should_escape_result,
+        blank_empty_fields=True,
     )
 
     # 去除各种乱七八糟字符后，文件夹名为空时，使用number显示
@@ -295,6 +296,7 @@ def _generate_file_name(cd_part, file_info: FileInfo, res: CrawlersResult) -> st
         show_cnword,
         show_moword,
         should_escape_result,
+        blank_empty_fields=True,
     )
 
     file_name += cd_part

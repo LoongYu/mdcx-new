@@ -468,6 +468,7 @@ class ShowData(ScrapeResult):
     """
 
     show_name: str
+    show_mode: str = "default"
 
     @classmethod
     def empty(cls) -> "ShowData":
@@ -479,4 +480,5 @@ class ShowData(ScrapeResult):
             data=CrawlersResult.empty(),
             other=OtherInfo.empty(),
             show_name="",
+            show_mode="default",
         )

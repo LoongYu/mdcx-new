@@ -399,10 +399,12 @@ def split_path(path: str | Path) -> tuple[Path, str]:
 
 def get_new_release(release: str, release_rule: str) -> str:
     if not release:
-        release = "0000-00-00"
+        return ""
     if release_rule == "YYYY-MM-DD":
         return release
-    year, month, day = re.findall(r"(\d{4})-(\d{2})-(\d{2})", release)[0]
+    if not (match := re.findall(r"(\d{4})-(\d{2})-(\d{2})", release)):
+        return release
+    year, month, day = match[0]
     return release_rule.replace("YYYY", year).replace("YY", year[-2:]).replace("MM", month).replace("DD", day)
 
 

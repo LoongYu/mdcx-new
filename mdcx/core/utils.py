@@ -237,6 +237,25 @@ def show_result(res: CrawlersResult, start_time: float):
     LogBuffer.log().write(f"\n 🍀 Data done!({get_used_time(start_time)}s)")
 
 
+def _normalize_template_value(value, *, blank_zero: bool = False) -> str:
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if not text or text.lower() == "none":
+        return ""
+    if blank_zero and text in {"0", "0.0", "0.00"}:
+        return ""
+    return text
+
+
+def _cleanup_empty_template_parts(rendered_name: str) -> str:
+    empty_pairs = [r"\[\s*\]", r"【\s*】", r"\(\s*\)", r"（\s*）"]
+    for pattern in empty_pairs:
+        rendered_name = re.sub(rf"\s*{pattern}\s*", " ", rendered_name)
+    rendered_name = re.sub(r"\s{2,}", " ", rendered_name)
+    return rendered_name.strip()
+
+
 def render_name_template(
     template: str,
     file_info: FileInfo,
@@ -245,6 +264,7 @@ def render_name_template(
     show_cnword: bool,
     show_moword: bool,
     should_escape_result: bool,
+    blank_empty_fields: bool = False,
 ) -> tuple[str, str, str, str, str, str]:
     """
     将模板字符串替换成实际值
@@ -266,20 +286,20 @@ def render_name_template(
     c_word = file_info.c_word
     definition = file_info.definition
 
-    title = json_data.title
-    originaltitle = json_data.originaltitle
-    studio = json_data.studio
-    publisher = json_data.publisher
-    year = json_data.year
-    outline = json_data.outline
-    runtime = json_data.runtime
-    director = json_data.director
-    actor = json_data.actor
-    release = json_data.release
-    number = json_data.number
-    series = json_data.series
-    mosaic = json_data.mosaic
-    letters = json_data.letters
+    title = _normalize_template_value(json_data.title)
+    originaltitle = _normalize_template_value(json_data.originaltitle)
+    studio = _normalize_template_value(json_data.studio)
+    publisher = _normalize_template_value(json_data.publisher)
+    year = _normalize_template_value(json_data.year, blank_zero=True)
+    outline = _normalize_template_value(json_data.outline)
+    runtime = _normalize_template_value(json_data.runtime, blank_zero=True)
+    director = _normalize_template_value(json_data.director)
+    actor = _normalize_template_value(json_data.actor)
+    release = _normalize_template_value(json_data.release)
+    number = _normalize_template_value(json_data.number)
+    series = _normalize_template_value(json_data.series)
+    mosaic = _normalize_template_value(json_data.mosaic)
+    letters = _normalize_template_value(json_data.letters)
 
     # 是否勾选文件名添加4k标识
     temp_4k = ""
@@ -306,22 +326,27 @@ def render_name_template(
         elif each == "definition":
             number += temp_4k
     # 生成number
-    first_letter = get_number_first_letter(number)
+    first_letter = get_number_first_letter(number) if number else ""
     # 处理异常情况
-    score = str(json_data.score)
-    if not series:
-        series = "未知系列"
-    if not actor:
-        actor = manager.config.actor_no_name
-    if not year:
-        year = "0000"
-    if not score:
-        score = "0.0"
-    release = get_new_release(release, manager.config.release_rule)
+    score = _normalize_template_value(json_data.score, blank_zero=True)
+    wanted = _normalize_template_value(json_data.wanted, blank_zero=True)
+    if blank_empty_fields:
+        release = get_new_release(release, manager.config.release_rule) if release else ""
+    else:
+        if not series:
+            series = "未知系列"
+        if not actor:
+            actor = manager.config.actor_no_name
+        if not year:
+            year = "0000"
+        if not score:
+            score = "0.0"
+        release = get_new_release(release, manager.config.release_rule)
     # 获取演员
-    first_actor = actor.split(",").pop(0)
-    all_actor = deal_actor_more(json_data.all_actor)
-    actor = deal_actor_more(actor)
+    first_actor = actor.split(",").pop(0) if actor else ""
+    all_actor_raw = _normalize_template_value(json_data.all_actor)
+    all_actor = deal_actor_more(all_actor_raw) if all_actor_raw else ""
+    actor = deal_actor_more(actor) if actor else ""
 
     # 替换字段里的文件夹分隔符
     if should_escape_result:
@@ -357,8 +382,8 @@ def render_name_template(
         ("first_letter", first_letter),
         ("letters", letters),
         ("filename", filename),
-        ("wanted", str(json_data.wanted)),
-        ("score", str(score)),
+        ("wanted", wanted),
+        ("score", score),
     ]
 
     # 国产使用title作为number会出现重复，此处去除title，避免重复(需要注意titile繁体情况)
@@ -372,4 +397,6 @@ def render_name_template(
     rendered_name = template
     for each_key in repl_list:
         rendered_name = rendered_name.replace(each_key[0], each_key[1])
+    if blank_empty_fields:
+        rendered_name = _cleanup_empty_template_parts(rendered_name)
     return rendered_name, template, number, originaltitle, outline, title

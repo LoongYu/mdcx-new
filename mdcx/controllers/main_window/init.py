@@ -29,6 +29,14 @@ def Init_Ui(self: "MyMAinWindow"):
     self.Ui.progressBar_scrape.setValue(0)  # 进度条清0
     self.Ui.progressBar_scrape.setTextVisible(False)  # 不显示进度条文字
     self.Ui.pushButton_start_cap.setCheckable(True)  # 主界面开始按钮可点状态
+    self.Ui.pushButton_select_media_folder.setGeometry(450, 13, 101, 40)
+    self.Ui.pushButton_load_scraped_dir.setGeometry(565, 13, 101, 40)
+    self.Ui.pushButton_load_scraped_dir.setObjectName("pushButton_load_scraped_dir")
+    self.Ui.pushButton_load_scraped_dir.setText("读取已刮削")
+    self.Ui.pushButton_load_scraped_dir.setToolTip(" 读取当前目录中的已刮削项目 ")
+    self.Ui.pushButton_load_scraped_dir.setStyleSheet(self.Ui.pushButton_select_media_folder.styleSheet())
+    self.Ui.pushButton_load_scraped_dir.setFont(self.Ui.pushButton_select_media_folder.font())
+    self.Ui.pushButton_load_scraped_dir.raise_()
     self.init_QTreeWidget()  # 初始化树状图
     self.Ui.label_poster.setScaledContents(True)  # 图片自适应窗口
     self.Ui.label_thumb.setScaledContents(True)  # 图片自适应窗口
@@ -195,6 +203,7 @@ def Init_Singal(self: "MyMAinWindow"):
     self.Ui.pushButton_select_netdisk_path.clicked.connect(self.pushButton_select_netdisk_path_clicked)
     self.Ui.pushButton_select_localdisk_path.clicked.connect(self.pushButton_select_localdisk_path_clicked)
     self.Ui.pushButton_select_media_folder.clicked.connect(self.pushButton_select_media_folder_clicked)
+    self.Ui.pushButton_load_scraped_dir.clicked.connect(self.pushButton_load_scraped_dir_clicked)
     self.Ui.pushButton_select_media_folder_setting_page.clicked.connect(self.pushButton_select_media_folder_clicked)
     self.Ui.pushButton_select_softlink_folder.clicked.connect(self.pushButton_select_softlink_folder_clicked)
     self.Ui.pushButton_select_sucess_folder.clicked.connect(self.pushButton_select_sucess_folder_clicked)
@@ -324,6 +333,11 @@ def Init_Singal(self: "MyMAinWindow"):
     self.set_pic_pixmap.connect(self.resize_label_and_setpixmap)
     self.set_pic_text.connect(self.Ui.label_poster_size.setText)
     self.change_to_mainpage.connect(self.change_mainpage)
+    self.pushButton_load_scraped_dir.connect(self.Ui.pushButton_load_scraped_dir.setText)
+    self.set_load_scraped_dir_enabled.connect(self.Ui.pushButton_load_scraped_dir.setEnabled)
+    self.set_main_select_media_folder_enabled.connect(self.Ui.pushButton_select_media_folder.setEnabled)
+    self.set_main_start_buttons_enabled.connect(self.Ui.pushButton_start_cap.setEnabled)
+    self.set_main_start_buttons_enabled.connect(self.Ui.pushButton_start_cap2.setEnabled)
     # endregion
 
     # region 文本更新
@@ -375,6 +389,11 @@ def init_QTreeWidget(self: "MyMAinWindow"):
     except Exception:
         signal_qt.show_traceback_log(traceback.format_exc())
     signal_qt.set_main_info()
+    self.json_array.clear()
+    self.tree_item_map.clear()
+    self.show_data = None
+    self.show_name = None
+    self.now_show_name = None
     Flags.count_claw = 0  # 批量刮削次数
     if self.Ui.pushButton_start_cap.text() != "开始":
         Flags.count_claw = 1  # 批量刮削次数

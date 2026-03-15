@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPushButton,
     QShortcut,
     QSystemTrayIcon,
     QTreeWidgetItem,
@@ -42,7 +43,8 @@ from mdcx.config.extend import deal_url, get_movie_path_setting
 from mdcx.config.manager import manager
 from mdcx.config.resources import resources
 from mdcx.consts import GITHUB_ISSUES_NEW_URL, GITHUB_RELEASES_URL, IS_WINDOWS, LOCAL_VERSION
-from mdcx.core.file import get_output_name, rename_output_by_current_config
+from mdcx.core.file import get_file_info_v2, get_output_name, rename_output_by_current_config
+from mdcx.core.nfo import get_nfo_data
 from mdcx.core.scraper import again_search, get_remain_list, start_new_scrape
 from mdcx.image import get_pixmap
 from mdcx.manual import ManualConfig
@@ -109,6 +111,10 @@ class MyMAinWindow(QMainWindow):
     pushButton_check_and_clean_files = pyqtSignal(str)
     pushButton_move_mp4 = pyqtSignal(str)
     pushButton_find_missing_number = pyqtSignal(str)
+    pushButton_load_scraped_dir = pyqtSignal(str)
+    set_load_scraped_dir_enabled = pyqtSignal(bool)
+    set_main_select_media_folder_enabled = pyqtSignal(bool)
+    set_main_start_buttons_enabled = pyqtSignal(bool)
     label_show_version = pyqtSignal(str)
 
     # endregion
@@ -127,6 +133,7 @@ class MyMAinWindow(QMainWindow):
         self.req_logs_counts = 0  # 日志次数（每1w次清屏）
         self.file_main_open_path = Path()  # 主界面打开的文件路径
         self.json_array: dict[str, ShowData] = {}  # 主界面右侧结果树状数据
+        self.tree_item_map: dict[str, QTreeWidgetItem] = {}  # 主界面树节点缓存
 
         self.window_radius = 0  # 窗口四角弧度，为0时表示显示窗口标题栏
         self.window_border = 0  # 窗口描边，为0时表示显示窗口标题栏
@@ -167,6 +174,7 @@ class MyMAinWindow(QMainWindow):
         resources.get_fonts()
         self.Ui = Ui_MDCx()  # 实例化 Ui
         self.Ui.setupUi(self)  # 初始化 Ui
+        self.Ui.pushButton_load_scraped_dir = QPushButton(self.Ui.page_main)
         self.cutwindow = CutWindow(self)
         self.Init_Singal()  # 信号连接
         self.Init_Ui()  # 设置Ui初始状态
@@ -677,6 +685,27 @@ class MyMAinWindow(QMainWindow):
         elif self.Ui.pushButton_start_cap.text() == "■ 停止":
             self.pushButton_stop_scrape_clicked()
 
+    def pushButton_load_scraped_dir_clicked(self):
+        if self.Ui.pushButton_start_cap.text() != "开始":
+            signal_qt.show_scrape_info(f"💡 请先停止当前任务！{get_current_time()}")
+            return
+
+        selected_path = self._get_select_folder_path()
+        if not selected_path:
+            return
+        root_path = Path(selected_path)
+
+        self.pushButton_main_clicked()
+        self.init_QTreeWidget()
+        self.set_load_scraped_dir_enabled.emit(False)
+        self.set_main_start_buttons_enabled.emit(False)
+        self.pushButton_load_scraped_dir.emit("读取中...")
+        self.set_main_select_media_folder_enabled.emit(False)
+        self.set_label_file_path.emit(f"🔎 正在读取已刮削目录...\n {root_path}")
+
+        t = threading.Thread(target=self._load_scraped_dir_thread, args=(root_path,), daemon=True)
+        t.start()
+
     # 停止确认弹窗
     def pushButton_stop_scrape_clicked(self):
         if Switch.SHOW_DIALOG_STOP_SCRAPE in manager.config.switch_on:
@@ -796,10 +825,160 @@ class MyMAinWindow(QMainWindow):
         # self.Ui.treeWidget_number.verticalScrollBar().setValue(self.Ui.treeWidget_number.verticalScrollBar().maximum())
         # self.Ui.treeWidget_number.setCurrentItem(node)
         # self.Ui.treeWidget_number.scrollToItem(node)
+        return node
+
+    def _extract_show_name_prefix(self, show_name: str) -> str:
+        match = re.match(r"^(\d+(?:-\d+)?\.)", show_name)
+        return match.group(1) if match else ""
+
+    def _build_tree_show_name(
+        self,
+        file_info: FileInfo,
+        data: CrawlersResult,
+        prefix: str = "",
+        show_mode: str = "default",
+    ) -> str:
+        if show_mode == "number":
+            base_name = data.number or file_info.number or "未命名"
+        else:
+            base_name = file_info.file_path.stem or data.number or file_info.file_show_name or "未命名"
+        base_name = base_name.strip()
+        if len(base_name) > 60:
+            base_name = base_name[:57] + "..."
+        return f"{prefix}{base_name}"
+
+    def _make_unique_show_name(self, base_name: str, current_name: str | None = None) -> str:
+        candidate = base_name or "未命名"
+        index = 2
+        while candidate in self.json_array and candidate != current_name:
+            candidate = f"{base_name} ({index})"
+            index += 1
+        return candidate
+
+    def _refresh_show_data_name(self, show_data: ShowData, old_show_name: str | None = None) -> None:
+        old_show_name = old_show_name or show_data.show_name
+        prefix = "" if show_data.show_mode == "number" else self._extract_show_name_prefix(old_show_name)
+        new_show_name = self._make_unique_show_name(
+            self._build_tree_show_name(show_data.file_info, show_data.data, prefix, show_data.show_mode),
+            current_name=old_show_name,
+        )
+        if new_show_name == old_show_name:
+            return
+
+        tree_item = self.tree_item_map.pop(old_show_name, None)
+        if tree_item is not None:
+            tree_item.setText(0, new_show_name)
+            self.tree_item_map[new_show_name] = tree_item
+
+        if old_show_name in self.json_array:
+            self.json_array.pop(old_show_name, None)
+        show_data.show_name = new_show_name
+        self.json_array[new_show_name] = show_data
+
+        if self.show_name == old_show_name:
+            self.show_name = new_show_name
+        if self.now_show_name == old_show_name:
+            self.now_show_name = new_show_name
+
+    def _is_supported_media_file(self, file_name: str) -> bool:
+        lower_name = file_name.lower()
+        if lower_name.startswith("."):
+            return False
+        if "trailer." in lower_name or "trailers." in lower_name or "theme_video." in lower_name:
+            return False
+        return Path(file_name).suffix.lower() in {ext.lower() for ext in manager.config.media_type}
+
+    async def _load_scraped_show_data(self, file_path: Path) -> ShowData | None:
+        file_info = await get_file_info_v2(file_path, copy_sub=False)
+        if not file_info.number:
+            return None
+
+        json_data, other = await get_nfo_data(file_path, file_info.number)
+        if not json_data or not other:
+            return None
+
+        if not (other.thumb_path and other.thumb_path.is_file()) and other.fanart_path and other.fanart_path.is_file():
+            other.thumb_path = other.fanart_path
+
+        return ShowData(
+            file_info=file_info,
+            data=json_data,
+            other=other,
+            show_name="",
+            show_mode="number",
+        )
+
+    def _load_scraped_dir_thread(self, root_path: Path) -> None:
+        start_time = time.time()
+        loaded_count = 0
+        invalid_count = 0
+        seen_keys: set[tuple[str, str]] = set()
+        skip_dirs = {
+            "extrafanart",
+            "backdrops",
+            "behind the scenes",
+            "trailers",
+            manager.config.extrafanart_folder,
+        }
+
+        signal_qt.show_log_text(f"\n🍯 读取已刮削目录：{root_path}")
+        try:
+            for current_root, dirs, files in root_path.walk(top_down=True):
+                dirs[:] = [d for d in dirs if not d.startswith(".") and d.lower() not in skip_dirs]
+                media_files = sorted(f for f in files if self._is_supported_media_file(f))
+                for file_name in media_files:
+                    file_path = current_root / file_name
+                    if not file_path.with_suffix(".nfo").is_file():
+                        continue
+
+                    show_data = executor.run(self._load_scraped_show_data(file_path))
+                    if show_data is None:
+                        invalid_count += 1
+                        continue
+
+                    group_key = (
+                        str(show_data.file_info.folder_path.resolve()).lower(),
+                        show_data.data.number.upper() or show_data.file_info.number.upper(),
+                    )
+                    if group_key in seen_keys:
+                        continue
+                    seen_keys.add(group_key)
+
+                    loaded_count += 1
+                    show_data.show_name = self._build_tree_show_name(
+                        show_data.file_info,
+                        show_data.data,
+                        show_mode=show_data.show_mode,
+                    )
+                    signal_qt.show_list_name("succ", show_data, show_data.data.number)
+                    self.set_label_file_path.emit(
+                        f"🔎 正在读取已刮削目录：{loaded_count}\n {show_data.file_info.file_path}"
+                    )
+
+            if loaded_count:
+                self.label_result.emit(f" 已读取：{loaded_count} 成功：{loaded_count} 失败：0")
+                self.set_label_file_path.emit(f"✅ 已读取 {loaded_count} 个已刮削项目\n {root_path}")
+                signal_qt.show_log_text(
+                    f"🎉 已读取完成！共 {loaded_count} 个项目（跳过无效 NFO {invalid_count} 个）({get_used_time(start_time)}s)"
+                )
+            else:
+                self.label_result.emit(" 已读取：0 成功：0 失败：0")
+                self.set_label_file_path.emit(f"⚠️ 未在目录中找到可读取的已刮削项目\n {root_path}")
+                signal_qt.show_log_text(f"⚠️ 未找到可读取的已刮削项目：{root_path}")
+        except Exception:
+            signal_qt.show_traceback_log(traceback.format_exc())
+            signal_qt.show_log_text(traceback.format_exc())
+            self.set_label_file_path.emit(f"❌ 读取已刮削目录失败\n {root_path}")
+        finally:
+            self.set_load_scraped_dir_enabled.emit(True)
+            self.set_main_start_buttons_enabled.emit(True)
+            self.pushButton_load_scraped_dir.emit("读取已刮削")
+            self.set_main_select_media_folder_enabled.emit(True)
 
     def show_list_name(self, status: Literal["succ", "fail"], show_data: ShowData, real_number=""):
+        show_data.show_name = self._make_unique_show_name(show_data.show_name)
         # 添加树状节点
-        self._addTreeChild(status, show_data.show_name)
+        tree_item = self._addTreeChild(status, show_data.show_name)
 
         if not show_data.data.title:
             show_data.data.title = LogBuffer.error().get()
@@ -807,6 +986,7 @@ class MyMAinWindow(QMainWindow):
         self.show_name = show_data.show_name
         self.set_main_info(show_data)
         self.json_array[show_data.show_name] = show_data
+        self.tree_item_map[show_data.show_name] = tree_item
 
     def set_main_info(self, show_data: "ShowData | None"):
         if show_data is not None:
@@ -1136,7 +1316,8 @@ class MyMAinWindow(QMainWindow):
         try:
             if self.now_show_name is None:
                 return
-            show_data = self.json_array[self.now_show_name]
+            old_show_name = self.now_show_name
+            show_data = self.json_array[old_show_name]
             json_data = show_data.data
             file_info = show_data.file_info
             json_data.number = self.Ui.lineEdit_nfo_number.text()
@@ -1164,6 +1345,7 @@ class MyMAinWindow(QMainWindow):
             ok, error, new_file_info, nfo_path = executor.run(rename_output_by_current_config(file_info, json_data))
             if ok:
                 show_data.file_info = new_file_info
+                self._refresh_show_data_name(show_data, old_show_name)
                 success_folder = get_movie_path_setting(new_file_info.file_path).success_folder
                 (
                     _folder_new_path,
@@ -2503,6 +2685,7 @@ class MyMAinWindow(QMainWindow):
         self.Ui.pushButton_start_cap.setText("■ 停止")
         self.Ui.pushButton_start_cap2.setText("■ 停止")
         self.Ui.pushButton_select_media_folder.setVisible(False)
+        self.Ui.pushButton_load_scraped_dir.setVisible(False)
         self.Ui.pushButton_start_single_file.setEnabled(False)
         self.Ui.pushButton_start_single_file.setText("正在刮削中...")
         self.Ui.pushButton_add_sub_for_all_video.setEnabled(False)
@@ -2536,6 +2719,7 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_start_cap.emit("开始")
         self.pushButton_start_cap2.emit("开始")
         self.Ui.pushButton_select_media_folder.setVisible(True)
+        self.Ui.pushButton_load_scraped_dir.setVisible(True)
         self.Ui.pushButton_start_single_file.setEnabled(True)
         self.pushButton_start_single_file.emit("刮削")
         self.Ui.pushButton_add_sub_for_all_video.setEnabled(True)
