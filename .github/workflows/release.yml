@@ -91,12 +91,8 @@ jobs:
         env:
           INPUT_BODY: ${{ github.event.inputs.release_body }}
         run: |
-          if [ -n "$INPUT_BODY" ]; then
-            body="$INPUT_BODY"
-          else
-            body="$(cat changelog.md)"
-          fi
-          body="${body//\\n/$'\n'}"
+          version="${{ github.event.inputs.tag || github.ref_name }}"
+          body="$(python scripts/release_body.py --tag "$version" --input-body "$INPUT_BODY")"
           echo 'BODY<<EOF' >> $GITHUB_OUTPUT
           echo "$body" >> $GITHUB_OUTPUT
           echo 'EOF' >> $GITHUB_OUTPUT
