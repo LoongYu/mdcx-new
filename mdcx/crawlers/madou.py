@@ -8,6 +8,8 @@ from lxml import etree
 
 from ..config.enums import Website
 from ..config.manager import manager
+from ..models.enums import FileMode
+from ..models.flags import Flags
 from ..models.log_buffer import LogBuffer
 from ..web_async import normalize_image_bytes
 
@@ -313,6 +315,7 @@ async def main(number, appoint_url="", file_path="", appoint_number="", **kwargs
     madou_url = manager.config.get_site_url(Website.MADOU, "https://madou.com")
     target_number = (appoint_number or number or "").strip()
     real_url = appoint_url.strip()
+    trust_manual_detail_url = Flags.file_mode == FileMode.Single and bool(real_url and "/archives/" in real_url)
     dic = {"title": "", "thumb": "", "website": ""}
 
     try:
@@ -323,10 +326,15 @@ async def main(number, appoint_url="", file_path="", appoint_number="", **kwargs
                 raise Exception(f"网络请求错误: {error}")
             detail = parse_detail_page(html_content, fetch_url)
             detail_number = detail.get("number", "")
-            if target_number and detail_number and normalize_code(detail_number) != normalize_code(target_number):
+            if (
+                not trust_manual_detail_url
+                and target_number
+                and detail_number
+                and normalize_code(detail_number) != normalize_code(target_number)
+            ):
                 raise Exception(f"详情页番号不匹配: {detail_number}")
             if not detail_number:
-                if target_number:
+                if target_number and not trust_manual_detail_url:
                     raise Exception("详情页未找到番号")
                 detail["number"] = target_number
                 detail["series"] = extract_series(target_number)
