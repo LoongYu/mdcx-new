@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 
@@ -26,6 +27,8 @@ def load_release_body(tag: str, input_body: str) -> str:
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument("--tag", default="", help="Release tag, e.g. 22026031505")
     parser.add_argument("--input-body", default="", help="Manual release body from workflow input")
