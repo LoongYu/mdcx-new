@@ -137,6 +137,10 @@ def extract_actor_list(html) -> list[str]:
     for node in html.xpath('//div[contains(@class, "models")]//a[contains(@class, "model")]'):
         name = (node.get("title") or "").strip()
         if not name:
+            name = "".join(node.xpath('.//img/@title')).strip()
+        if not name:
+            name = "".join(node.xpath('.//img/@data-original-title')).strip()
+        if not name:
             name = "".join(node.xpath('.//span/@title')).strip()
         if not name:
             name = "".join(node.xpath('.//text()')).strip()
