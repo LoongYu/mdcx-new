@@ -21,6 +21,7 @@ from . import (
     jav321,
     javbus,
     javday,
+    javfree,
     javlibrary_new,
     kin8,
     lulubar,
@@ -60,6 +61,7 @@ CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.JAV321, jav321.main),
     (Website.JAVBUS, javbus.main),
     (Website.JAVDAY, javday.main),
+    (Website.JAVFREE, javfree.main),
     (Website.JAVLIBRARY, javlibrary_new.main),  # lang
     (Website.KIN8, kin8.main),
     (Website.LULUBAR, lulubar.main),

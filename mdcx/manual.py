@@ -480,6 +480,8 @@ class ManualConfig:
         "jav321": Website.JAV321,
         "javbus": Website.JAVBUS,
         "javdb": Website.JAVDB,
+        "javfree.me": Website.JAVFREE,
+        "javfree": Website.JAVFREE,
         "javlibrary": Website.JAVLIBRARY,
         "madou.com": Website.MADOU,
         "mdtv": Website.MDTV,

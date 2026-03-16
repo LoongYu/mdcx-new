@@ -1207,7 +1207,7 @@ class MyMAinWindow(QMainWindow):
                 "输入网址重新刮削",
                 f"文件名: {main_file_name}\n支持网站:dmm、getchu、fc2"
                 f"、fc2hub、iqqtv、jav321、javbus、javdb、freejavbt、javlibrary、mdtv"
-                f"、jable、madou、madouqu、mgstage、7mmtv、xcity、mywife、giga、dahlia、fantastica"
+                f"、jable、javfree、madou、madouqu、mgstage、7mmtv、xcity、mywife、giga、dahlia、fantastica"
                 f"、hdouban、lulubar、cnmdb、theporndb、kin8\n请输入番号对应的网址（不是网站首页地址！！！是番号页面地址！！！）:",
             )
             if ok and text:
@@ -1874,6 +1874,7 @@ class MyMAinWindow(QMainWindow):
   <li>javday</li>
   <li>javdb</li>
   <li>jable</li>
+  <li>javfree</li>
   <li>javlibrary</li>
   <li>kin8</li>
   <li>lulubar</li>
@@ -2239,6 +2240,7 @@ class MyMAinWindow(QMainWindow):
                 Website.JAVBUS: "https://www.javbus.com",
                 Website.JAVDB: "https://javdb.com",
                 Website.JABLE: "https://jable.tv",
+                Website.JAVFREE: "https://javfree.me",
                 Website.JAV321: "https://www.jav321.com",
                 Website.JAVLIBRARY: "https://www.javlibrary.com",
                 Website.DMM: "https://www.dmm.co.jp",
