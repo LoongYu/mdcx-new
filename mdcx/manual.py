@@ -475,6 +475,8 @@ class ManualConfig:
         "fc2hub": Website.FC2HUB,
         "fc2ppvdb": Website.FC2PPVDB,
         "iqq": Website.IQQTV,
+        "jable.tv": Website.JABLE,
+        "jable": Website.JABLE,
         "jav321": Website.JAV321,
         "javbus": Website.JAVBUS,
         "javdb": Website.JAVDB,

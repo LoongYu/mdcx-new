@@ -500,6 +500,7 @@ class Website(Enum):
     HDOUBAN = "hdouban"
     HSCANGKU = "hscangku"
     IQQTV = "iqqtv"
+    JABLE = "jable"
     JAV321 = "jav321"
     JAVBUS = "javbus"
     JAVDAY = "javday"

@@ -17,6 +17,7 @@ from . import (
     hdouban,
     hscangku,
     iqqtv_new,
+    jable,
     jav321,
     javbus,
     javday,
@@ -55,6 +56,7 @@ CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.HDOUBAN, hdouban.main),
     (Website.HSCANGKU, hscangku.main),
     (Website.IQQTV, iqqtv_new.main),  # lang
+    (Website.JABLE, jable.main),
     (Website.JAV321, jav321.main),
     (Website.JAVBUS, javbus.main),
     (Website.JAVDAY, javday.main),

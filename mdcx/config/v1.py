@@ -121,7 +121,7 @@ class ConfigV1:
     scrape_like: str = r"info"
     website_single: str = r"javdb"
     website_youma: str = (
-        r"iqqtv,javbus,freejavbt,jav321,dmm,javlibrary,7mmtv,hdouban,javdb,lulubar,xcity"
+        r"iqqtv,javbus,freejavbt,jav321,dmm,javlibrary,jable,7mmtv,hdouban,javdb,lulubar,xcity"
     )
 
     website_wuma: str = r"iqqtv,javbus,freejavbt,jav321,7mmtv,hdouban,javdb"
