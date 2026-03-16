@@ -95,6 +95,23 @@ class Parser(DetailPageParser):
         info, _, _, _ = split_content_blocks(html)
         actors = info.get('出演者', '')
         values = [v.strip() for v in re.split(r'[、,/，]+', actors) if v.strip()]
+        if values:
+            return values
+
+        tag_values = [
+            v.strip()
+            for v in extract_all_texts(
+                html,
+                '//div[contains(@class,"entry-tags")]//span[a and strong[contains(text(),"Tags")]]/a/text()',
+            )
+            if v.strip()
+        ]
+        prefix = re.sub(r'[^A-Z]+', '', (ctx.input.number or '').upper())
+        for value in tag_values:
+            upper = value.upper()
+            if prefix and upper == prefix:
+                continue
+            return [value]
         return values
 
     async def directors(self, ctx, html: Selector) -> list[str]:
@@ -140,7 +157,10 @@ class Parser(DetailPageParser):
             item = item.strip()
             if item and item not in tags:
                 tags.append(item)
-        for item in extract_all_texts(html, '//div[contains(@class,"entry-tags")]//span[a and strong[contains(text(),"Categorized")]]/a/text()', '//div[contains(@class,"entry-tags")]//span[a and strong[contains(text(),"Tags")]]/a/text()'):
+        for item in extract_all_texts(
+            html,
+            '//div[contains(@class,"entry-tags")]//span[a and strong[contains(text(),"Tags")]]/a/text()',
+        ):
             if item and item not in tags:
                 tags.append(item)
         return tags

@@ -331,6 +331,8 @@ def render_name_template(
     score = _normalize_template_value(json_data.score, blank_zero=True)
     wanted = _normalize_template_value(json_data.wanted, blank_zero=True)
     if blank_empty_fields:
+        if not actor:
+            actor = manager.config.actor_no_name
         release = get_new_release(release, manager.config.release_rule) if release else ""
     else:
         if not series:
