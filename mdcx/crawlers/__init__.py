@@ -39,6 +39,7 @@ from .base import get_crawler, register_crawler
 from .base.compat import get_v1_crawler, register_v1_crawler
 from .dmm_new import DmmCrawler
 from .javdb_new import JavdbCrawler
+from .javfree import JavfreeCrawler
 
 CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
     (Website.MMTV, mmtv.main),
@@ -78,6 +79,7 @@ CRAWLER_FUNCS: list[tuple[Website, Callable]] = [
 
 register_crawler(DmmCrawler)
 register_crawler(JavdbCrawler)
+register_crawler(JavfreeCrawler)
 for site, func in CRAWLER_FUNCS:
     register_v1_crawler(site, func)
 
