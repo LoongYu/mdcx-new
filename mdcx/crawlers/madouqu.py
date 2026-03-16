@@ -20,6 +20,29 @@ def get_actor_photo(actor):
     return data
 
 
+def build_search_terms(number_list, filename_list):
+    # 优先保留原始带连接符的番号，再回退到空格/纯字符形式
+    def sort_key(value: str):
+        value = (value or "").strip()
+        return (
+            0 if "-" in value else 1,
+            0 if " " in value else 1,
+            len(value),
+        )
+
+    seen = set()
+    result = []
+    for value in sorted(number_list, key=sort_key) + filename_list:
+        value = (value or "").strip()
+        if not value:
+            continue
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
 def get_detail_info(html, number, file_path):
     detail_info = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]//p//text()')
     # detail_info = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]//text()')
@@ -56,12 +79,13 @@ def get_detail_info(html, number, file_path):
     return number, title, actor, cover_url, studio, release, year
 
 
-def get_real_url(html, number_list):
-    item_list = html.xpath('//div[@class="entry-media"]/div/a')
+def get_real_url(html, number_list, max_results=3):
+    item_list = html.xpath('//div[@class="entry-media"]/div/a')[:max_results]
     for each in item_list:
         detail_url = each.get("href")
         # lazyload属性容易改变，去掉也能拿到结果
-        title = each.xpath("img[@class]/@alt")[0]
+        title_list = each.xpath("img[@class]/@alt")
+        title = title_list[0] if title_list else ""
         if title and detail_url:
             for n in number_list:
                 temp_n = re.sub(r"[\W_]", "", n).upper()
@@ -93,7 +117,7 @@ async def main(
         if not real_url:
             # 处理番号
             number_list, filename_list = get_number_list(number, appoint_number, file_path)
-            n_list = number_list[:1] + filename_list
+            n_list = build_search_terms(number_list, filename_list)
             for each in n_list:
                 real_url = f"{madouqu_url}/?s={each}"
                 # real_url = 'https://madouqu.com/?s=XSJ-138.%E5%85%BB%E5%AD%90%E7%9A%84%E7%A7%98%E5%AF%86%E6%95%99%E5%AD%A6EP6'
@@ -106,7 +130,7 @@ async def main(
                     LogBuffer.info().write(web_info + debug_info)
                     raise Exception(debug_info)
                 search_page = etree.fromstring(response, etree.HTMLParser())
-                result, number, title, real_url = get_real_url(search_page, n_list)
+                result, number, title, real_url = get_real_url(search_page, n_list, max_results=3)
                 if result:
                     break
             else:
