@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 import re
 import time
 from datetime import datetime
@@ -9,6 +10,10 @@ from ..config.enums import Website
 from ..config.manager import manager
 from ..models.log_buffer import LogBuffer
 from .guochan import get_extra_info, get_number_list
+
+
+SEARCH_RETRY_COUNT = 3
+SEARCH_RETRY_DELAY = 1.0
 
 
 def get_actor_photo(actor):
@@ -120,17 +125,25 @@ async def main(
             n_list = build_search_terms(number_list, filename_list)
             for each in n_list:
                 real_url = f"{madouqu_url}/?s={each}"
-                # real_url = 'https://madouqu.com/?s=XSJ-138.%E5%85%BB%E5%AD%90%E7%9A%84%E7%A7%98%E5%AF%86%E6%95%99%E5%AD%A6EP6'
-                debug_info = f"请求地址: {real_url} "
-                LogBuffer.info().write(web_info + debug_info)
-                response, error = await manager.computed.async_client.get_text(real_url)
-
-                if response is None:
-                    debug_info = f"网络请求错误: {error}"
+                result = False
+                for attempt in range(1, SEARCH_RETRY_COUNT + 1):
+                    debug_info = f"请求地址: {real_url} (第 {attempt}/{SEARCH_RETRY_COUNT} 次)"
                     LogBuffer.info().write(web_info + debug_info)
-                    raise Exception(debug_info)
-                search_page = etree.fromstring(response, etree.HTMLParser())
-                result, number, title, real_url = get_real_url(search_page, n_list, max_results=3)
+                    response, error = await manager.computed.async_client.get_text(real_url)
+
+                    if response is None:
+                        debug_info = f"网络请求错误: {error}"
+                        LogBuffer.info().write(web_info + debug_info)
+                    else:
+                        search_page = etree.fromstring(response, etree.HTMLParser())
+                        result, number, title, real_url = get_real_url(search_page, n_list, max_results=3)
+                        if result:
+                            break
+                        debug_info = f"搜索结果未命中，准备重试 ({attempt}/{SEARCH_RETRY_COUNT})"
+                        LogBuffer.info().write(web_info + debug_info)
+
+                    if attempt < SEARCH_RETRY_COUNT:
+                        await asyncio.sleep(SEARCH_RETRY_DELAY)
                 if result:
                     break
             else:
