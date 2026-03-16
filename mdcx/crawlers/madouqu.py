@@ -48,6 +48,34 @@ def build_search_terms(number_list, filename_list):
     return result
 
 
+def get_cover_url(html):
+    # 优先使用正文首图 srcset 中 madouqu.com 的代理图，这类地址当前可访问性最好。
+    srcset_values = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]/p/img/@srcset')
+    candidates = []
+    for srcset in srcset_values:
+        for item in srcset.split(","):
+            url = item.strip().split(" ")[0].strip()
+            if url:
+                candidates.append(url)
+
+    for candidate in candidates:
+        if "i0.wp.com/madouqu.com/" in candidate:
+            return candidate
+
+    if candidates:
+        return candidates[0]
+
+    og_images = html.xpath("//meta[@property='og:image']/@content")
+    if og_images:
+        return og_images[0]
+
+    body_images = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]/p/img/@src')
+    if body_images:
+        return body_images[0]
+
+    return ""
+
+
 def get_detail_info(html, number, file_path):
     detail_info = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]//p//text()')
     # detail_info = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]//text()')
@@ -68,8 +96,7 @@ def get_detail_info(html, number, file_path):
     number = number if number else title
 
     studio = html.xpath('string(//span[@class="meta-category"])').strip()
-    cover_url = html.xpath('//div[@class="entry-content u-text-format u-clearfix"]/p/img/@src')
-    cover_url = cover_url[0] if cover_url else ""
+    cover_url = get_cover_url(html)
     actor = get_extra_info(title, file_path, info_type="actor") if actor == "" else actor
     # 处理发行时间，年份
     try:
