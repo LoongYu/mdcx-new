@@ -4,8 +4,6 @@ import re
 import time
 import traceback
 
-import zhconv
-
 from ..base.translate import deepl_translate, google_translate, llm_translate, youdao_translate
 from ..base.web import get_actorname
 from ..config.enums import FieldRule, Language, TagInclude
@@ -21,10 +19,17 @@ from ..utils import clean_list, get_used_time
 from ..utils.language import is_japanese
 
 
+def _needs_zhconv(*languages: Language | str) -> bool:
+    return any(language in (Language.ZH_CN, Language.ZH_TW, "zh_cn", "zh_tw") for language in languages)
+
+
+def _zhconv_convert(text: str, locale: str) -> str:
+    import zhconv
+
+    return zhconv.convert(text, locale)
+
+
 def translate_info(json_data: CrawlersResult, has_sub: bool):
-    xml_info = resources.info_mapping_data
-    if xml_info is not None and len(xml_info) == 0:
-        return json_data
     tag_translate = manager.config.get_field_config(CrawlerResultFields.TAGS).translate
     series_translate = manager.config.get_field_config(CrawlerResultFields.SERIES).translate
     studio_translate = manager.config.get_field_config(CrawlerResultFields.STUDIO).translate
@@ -36,6 +41,14 @@ def translate_info(json_data: CrawlersResult, has_sub: bool):
     publisher_language = manager.config.get_field_config(CrawlerResultFields.PUBLISHER).language
     director_language = manager.config.get_field_config(CrawlerResultFields.DIRECTORS).language
     fields_rule = manager.config.fields_rule
+
+    if any((tag_translate, series_translate, studio_translate, publisher_translate, director_translate)):
+        resources.ensure_local_data_loaded()
+        xml_info = resources.info_mapping_data
+        if xml_info is not None and len(xml_info) == 0:
+            return json_data
+    if _needs_zhconv(tag_language):
+        resources.ensure_zhconv_dict_loaded()
 
     tag_include = manager.config.nfo_tag_include
     tag = json_data.tag
@@ -152,9 +165,9 @@ def translate_info(json_data: CrawlersResult, has_sub: bool):
         director = info_data.get(director_language, "")
 
     if tag_language == Language.ZH_CN:
-        tag = zhconv.convert(tag, "zh-cn")
+        tag = _zhconv_convert(tag, "zh-cn")
     elif tag_language == Language.ZH_TW:
-        tag = zhconv.convert(tag, "zh-hant")
+        tag = _zhconv_convert(tag, "zh-hant")
 
     # tag去重/去空/排序
     tag = clean_list(tag)
@@ -201,6 +214,7 @@ async def translate_actor(res: CrawlersResult):
         return res
 
     # 映射表数据加载失败，返回
+    resources.ensure_local_data_loaded()
     xml_actor = resources.actor_mapping_data
     if xml_actor is not None and len(xml_actor) == 0:
         return res
@@ -244,6 +258,8 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
     title_sehua = manager.config.title_sehua
     title_sehua_zh = manager.config.title_sehua_zh
     title_is_jp = is_japanese(json_data.title)
+    if _needs_zhconv(title_language, outline_language):
+        resources.ensure_zhconv_dict_loaded()
 
     # 处理title
     if title_language != Language.JP:
@@ -253,6 +269,7 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
         if title_sehua_zh or (title_is_jp and title_sehua):
             start_time = time.time()
             try:
+                resources.ensure_local_data_loaded()
                 movie_title = resources.sehua_title_data.get(movie_number)
             except Exception:
                 signal.show_traceback_log(traceback.format_exc())
@@ -309,14 +326,14 @@ async def translate_title_outline(json_data: CrawlersResult, cd_part: str, movie
 
     # 简繁转换
     if title_language == "zh_cn":
-        json_data.title = zhconv.convert(json_data.title, "zh-cn")
+        json_data.title = _zhconv_convert(json_data.title, "zh-cn")
     elif title_language == "zh_tw":
-        json_data.title = zhconv.convert(json_data.title, "zh-hant")
-        json_data.mosaic = zhconv.convert(json_data.mosaic, "zh-hant")
+        json_data.title = _zhconv_convert(json_data.title, "zh-hant")
+        json_data.mosaic = _zhconv_convert(json_data.mosaic, "zh-hant")
 
     if outline_language == "zh_cn":
-        json_data.outline = zhconv.convert(json_data.outline, "zh-cn")
+        json_data.outline = _zhconv_convert(json_data.outline, "zh-cn")
     elif outline_language == "zh_tw":
-        json_data.outline = zhconv.convert(json_data.outline, "zh-hant")
+        json_data.outline = _zhconv_convert(json_data.outline, "zh-hant")
 
     return json_data

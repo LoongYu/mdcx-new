@@ -1,10 +1,10 @@
 import json
 import os
 import sys
+import threading
 import traceback
 from pathlib import Path
 
-import zhconv
 from lxml import etree
 from PyQt5.QtGui import QFontDatabase
 
@@ -77,10 +77,36 @@ class Resources:
         self.actor_mapping_data = None  # 演员映射表数据
         self.info_mapping_data = None  # 信息映射表数据
         self.sehua_title_data = {}  # 色花数据
+        self._local_data_loaded = False
+        self._mark_icons_ready = False
+        self._zhconv_dict_loaded = False
+        self._load_lock = threading.Lock()
 
-        self._get_or_generate_local_data()
-        self._get_mark_icon()
-        zhconv.loaddict(str(self.r("zhconv/zhcdict.json")))  # 加载繁简转换字典
+    def ensure_local_data_loaded(self):
+        if self._local_data_loaded:
+            return
+        with self._load_lock:
+            if not self._local_data_loaded:
+                self._get_or_generate_local_data()
+                self._local_data_loaded = True
+
+    def ensure_mark_icons(self):
+        if self._mark_icons_ready:
+            return
+        with self._load_lock:
+            if not self._mark_icons_ready:
+                self._get_mark_icon()
+                self._mark_icons_ready = True
+
+    def ensure_zhconv_dict_loaded(self):
+        if self._zhconv_dict_loaded:
+            return
+        with self._load_lock:
+            if not self._zhconv_dict_loaded:
+                import zhconv
+
+                zhconv.loaddict(str(self.r("zhconv/zhcdict.json")))  # 加载繁简转换字典
+                self._zhconv_dict_loaded = True
 
     def r(self, relative_path: str | Path):
         return self._resources_base / relative_path
@@ -93,6 +119,7 @@ class Resources:
         return self._userdata_base / relative_path
 
     def get_actor_data(self, actor):
+        self.ensure_local_data_loaded()
         # 初始化数据
         actor_data = {
             "zh_cn": actor,
@@ -124,6 +151,7 @@ class Resources:
         return actor_data
 
     def get_info_data(self, info):
+        self.ensure_local_data_loaded()
         # 初始化数据
         info_data = {
             "zh_cn": info,

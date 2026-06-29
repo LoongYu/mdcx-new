@@ -26,17 +26,7 @@ from PyQt5.QtWidgets import (
     QTreeWidgetItem,
 )
 
-from mdcx.base.file import (
-    check_and_clean_files,
-    get_success_list,
-    movie_lists,
-    newtdisk_creat_symlink,
-    save_remain_list,
-    save_success_list,
-)
-from mdcx.base.image import add_del_extrafanart_copy
-from mdcx.base.video import add_del_extras, add_del_theme_videos
-from mdcx.base.web import check_theporndb_api_token, check_version, ping_host
+from mdcx.base.file import save_remain_list, save_success_list
 from mdcx.base.web_sync import get_text_sync, request_sync
 from mdcx.config.enums import NfoInclude, Switch, Website
 from mdcx.config.extend import deal_url, get_movie_path_setting
@@ -45,7 +35,6 @@ from mdcx.config.resources import resources
 from mdcx.consts import GITHUB_ISSUES_NEW_URL, GITHUB_RELEASES_URL, IS_WINDOWS, LOCAL_VERSION
 from mdcx.core.file import get_file_info_v2, get_output_name, rename_output_by_current_config
 from mdcx.core.nfo import get_nfo_data
-from mdcx.core.scraper import again_search, get_remain_list, start_new_scrape
 from mdcx.image import get_pixmap
 from mdcx.manual import ManualConfig
 from mdcx.models.enums import FileMode
@@ -53,11 +42,6 @@ from mdcx.models.flags import Flags
 from mdcx.models.log_buffer import LogBuffer
 from mdcx.models.types import CrawlersResult, FileInfo, OtherInfo, ShowData
 from mdcx.signals import signal_qt
-from mdcx.tools.actress_db import ActressDB
-from mdcx.tools.emby_actor_image import update_emby_actor_photo
-from mdcx.tools.emby_actor_info import creat_kodi_actors, show_emby_actor_list, update_emby_actor_info
-from mdcx.tools.missing import check_missing_number
-from mdcx.tools.subtitle import add_sub_for_all_video
 from mdcx.utils import (
     _async_raise,
     add_html,
@@ -71,7 +55,6 @@ from mdcx.utils import (
 from mdcx.utils.file import delete_file_sync, open_file_thread
 from mdcx.views.MDCx import Ui_MDCx
 
-from ..cut_window import CutWindow
 from .handlers import show_netstatus
 from .init import Init_QSystemTrayIcon, Init_Singal, Init_Ui, init_QTreeWidget
 from .load_config import load_config
@@ -148,7 +131,7 @@ class MyMAinWindow(QMainWindow):
         self.timer_scrape = QTimer()  # 初始化一个定时器，用于间隔刮削
         self.timer_scrape.timeout.connect(self.auto_scrape)
         self.timer_update = QTimer()  # 初始化一个定时器，用于检查更新
-        self.timer_update.timeout.connect(check_version)
+        self.timer_update.timeout.connect(self._check_version_background)
         self.timer_update.start(43200000)  # 设置检查间隔12小时
         self.timer_remain_task = QTimer()  # 初始化一个定时器，用于显示保存剩余任务
         self.timer_remain_task.timeout.connect(save_remain_list)
@@ -175,11 +158,11 @@ class MyMAinWindow(QMainWindow):
         self.Ui = Ui_MDCx()  # 实例化 Ui
         self.Ui.setupUi(self)  # 初始化 Ui
         self.Ui.pushButton_load_scraped_dir = QPushButton(self.Ui.page_main)
-        self.cutwindow = CutWindow(self)
+        self.cutwindow = None
         self.Init_Singal()  # 信号连接
         self.Init_Ui()  # 设置Ui初始状态
         self.load_config()  # 加载配置
-        get_success_list()  # 获取历史成功刮削列表
+        QTimer.singleShot(0, self._load_success_list)  # 获取历史成功刮削列表
         # endregion
 
         # region 启动显示信息和后台检查更新
@@ -196,10 +179,10 @@ class MyMAinWindow(QMainWindow):
             "▶️ 点击右上角 【开始检测】按钮以测试网络连通性。"
         )  # 检查网络界面显示提示信息
         signal_qt.add_log("🍯 你可以点击左下角的图标来 显示 / 隐藏 请求信息面板！")
-        self.show_version()  # 日志页面显示版本信息
-        self.creat_right_menu()  # 加载右键菜单
+        QTimer.singleShot(0, self.show_version)  # 日志页面显示版本信息
+        QTimer.singleShot(0, self.creat_right_menu)  # 加载右键菜单
         self.pushButton_main_clicked()  # 切换到主界面
-        self.auto_start()  # 自动开始刮削
+        QTimer.singleShot(0, self.auto_start)  # 自动开始刮削
         # endregion
 
     # region Init
@@ -212,6 +195,23 @@ class MyMAinWindow(QMainWindow):
     def init_QTreeWidget(self): ...
 
     def load_config(self): ...
+
+    def _get_cutwindow(self):
+        if self.cutwindow is None:
+            from ..cut_window import CutWindow
+
+            self.cutwindow = CutWindow(self)
+        return self.cutwindow
+
+    def _check_version_background(self):
+        from mdcx.base.web import check_version
+
+        check_version()
+
+    def _load_success_list(self):
+        from mdcx.base.file import get_success_list
+
+        get_success_list()
 
     def creat_right_menu(self):
         self.menu_start = QAction(QIcon(resources.start_icon), "  开始刮削\tS", self)
@@ -253,6 +253,8 @@ class MyMAinWindow(QMainWindow):
         self.Ui.page_main.customContextMenuRequested.connect(self._menu)
 
     def _menu(self, pos=None):
+        if not hasattr(self, "menu_start"):
+            self.creat_right_menu()
         if not pos:
             pos = self.Ui.pushButton_right_menu.pos() + QPoint(40, 10)
             # pos = QCursor().pos()
@@ -568,6 +570,8 @@ class MyMAinWindow(QMainWindow):
             signal_qt.show_log_text(traceback.format_exc())
 
     def _show_version_thread(self):
+        from mdcx.base.web import check_theporndb_api_token, check_version
+
         version_info = f"基于 MDC-GUI 修改 当前版本: {self.localversion}"
         download_link = ""
         latest_version = check_version()
@@ -591,6 +595,8 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_check_javdb_cookie_clicked()  # 检测javdb cookie
         self.pushButton_check_javbus_cookie_clicked()  # 检测javbus cookie
         if manager.config.use_database:
+            from mdcx.tools.actress_db import ActressDB
+
             ActressDB.init_db()
         try:
             t = threading.Thread(target=check_theporndb_api_token)
@@ -680,6 +686,8 @@ class MyMAinWindow(QMainWindow):
     # 开始刮削按钮
     def pushButton_start_scrape_clicked(self):
         if self.Ui.pushButton_start_cap.text() == "开始":
+            from mdcx.core.scraper import get_remain_list, start_new_scrape
+
             if not get_remain_list():
                 start_new_scrape(FileMode.Default)
         elif self.Ui.pushButton_start_cap.text() == "■ 停止":
@@ -1193,6 +1201,8 @@ class MyMAinWindow(QMainWindow):
                 Flags.again_dic[file_path] = (text, "", "")
                 signal_qt.show_scrape_info(f"💡 已添加刮削！{get_current_time()}")
                 if self.Ui.pushButton_start_cap.text() == "开始":
+                    from mdcx.core.scraper import again_search
+
                     again_search()
 
     def search_by_url_clicked(self):
@@ -1216,6 +1226,8 @@ class MyMAinWindow(QMainWindow):
                     Flags.again_dic[file_path] = ("", url, website)
                     signal_qt.show_scrape_info(f"💡 已添加刮削！{get_current_time()}")
                     if self.Ui.pushButton_start_cap.text() == "开始":
+                        from mdcx.core.scraper import again_search
+
                         again_search()
                 else:
                     signal_qt.show_scrape_info(f"💡 不支持的网站！{get_current_time()}")
@@ -1259,8 +1271,9 @@ class MyMAinWindow(QMainWindow):
         主界面点图片
         """
         file_info = None if self.show_data is None else self.show_data.file_info
-        self.cutwindow.showimage(self.img_path, file_info)
-        self.cutwindow.show()
+        cutwindow = self._get_cutwindow()
+        cutwindow.showimage(self.img_path, file_info)
+        cutwindow.show()
 
     # 主界面-开关封面显示
     def checkBox_cover_clicked(self):
@@ -1408,6 +1421,8 @@ class MyMAinWindow(QMainWindow):
         if reply == QMessageBox.Yes:
             with open(resources.u("success.txt"), "w", encoding="utf-8", errors="ignore") as f:
                 f.write(self.Ui.textBrowser_show_success_list.toPlainText().replace("暂无成功刮削的文件", "").strip())
+            from mdcx.base.file import get_success_list
+
             get_success_list()
             self.Ui.widget_show_success.hide()
 
@@ -1489,6 +1504,8 @@ class MyMAinWindow(QMainWindow):
     # 日志页点一键刮削失败列表
     def pushButton_scraper_failed_list_clicked(self):
         if len(Flags.failed_list) and self.Ui.pushButton_start_cap.text() == "开始":
+            from mdcx.core.scraper import start_new_scrape
+
             start_new_scrape(FileMode.Default, movie_list=[s[0] for s in Flags.failed_list])
             self.show_hide_failed_list(False)
 
@@ -1558,6 +1575,8 @@ class MyMAinWindow(QMainWindow):
             self.pushButton_show_log_clicked()  # 点击按钮后跳转到日志页面
             if self.Ui.lineEdit_actors_name.text() != manager.config.actors_name:  # 保存配置
                 self.pushButton_save_config_clicked()
+            from mdcx.tools.missing import check_missing_number
+
             executor.submit(check_missing_number(False))
 
     # 工具页面本地资源库点选择目录
@@ -1599,6 +1618,8 @@ class MyMAinWindow(QMainWindow):
             self.pushButton_save_config_clicked()
 
         try:
+            from mdcx.base.file import newtdisk_creat_symlink
+
             executor.submit(newtdisk_creat_symlink(self.Ui.checkBox_copy_netdisk_nfo.isChecked()))
         except Exception:
             signal_qt.show_traceback_log(traceback.format_exc())
@@ -1617,6 +1638,8 @@ class MyMAinWindow(QMainWindow):
             or self.Ui.lineEdit_local_library_path.text() != manager.config.local_library
         ):
             self.pushButton_save_config_clicked()
+        from mdcx.tools.missing import check_missing_number
+
         executor.submit(check_missing_number(True))
 
     # 工具-单文件刮削
@@ -1665,6 +1688,8 @@ class MyMAinWindow(QMainWindow):
         else:
             signal_qt.show_scrape_info(f"💡 不支持的网站！{get_current_time()}")
             return
+        from mdcx.core.scraper import start_new_scrape
+
         start_new_scrape(FileMode.Single)
 
     def pushButton_select_file_clear_info_clicked(self):  # 点清空信息
@@ -1682,8 +1707,9 @@ class MyMAinWindow(QMainWindow):
             None, "选取缩略图", path, "Picture Files(*.jpg *.png);;All Files(*)", options=self.options
         )
         if file_path:
-            self.cutwindow.showimage(Path(file_path))
-            self.cutwindow.show()
+            cutwindow = self._get_cutwindow()
+            cutwindow.showimage(Path(file_path))
+            cutwindow.show()
 
     # 工具-视频移动
     def pushButton_move_mp4_clicked(self):
@@ -1704,6 +1730,8 @@ class MyMAinWindow(QMainWindow):
                 signal_qt.show_log_text(traceback.format_exc())
 
     def _move_file_thread(self):
+        from mdcx.base.file import movie_lists
+
         signal_qt.change_buttons_status.emit()
         c = get_movie_path_setting()
         movie_path = c.movie_path
@@ -1953,6 +1981,8 @@ class MyMAinWindow(QMainWindow):
             self.pushButton_save_config_clicked()
         self.pushButton_show_log_clicked()
         try:
+            from mdcx.base.file import check_and_clean_files
+
             executor.submit(check_and_clean_files())
         except Exception:
             signal_qt.show_traceback_log(traceback.format_exc())
@@ -1962,6 +1992,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_add_sub_for_all_video_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.tools.subtitle import add_sub_for_all_video
+
             executor.submit(add_sub_for_all_video())
         except Exception:
             signal_qt.show_traceback_log(traceback.format_exc())
@@ -1972,6 +2004,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_add_all_extras_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.base.video import add_del_extras
+
             executor.submit(add_del_extras("add"))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -1979,6 +2013,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_del_all_extras_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.base.video import add_del_extras
+
             executor.submit(add_del_extras("del"))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -1988,6 +2024,8 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         self.pushButton_save_config_clicked()
         try:
+            from mdcx.base.image import add_del_extrafanart_copy
+
             executor.submit(add_del_extrafanart_copy("add"))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -1996,6 +2034,8 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         self.pushButton_save_config_clicked()
         try:
+            from mdcx.base.image import add_del_extrafanart_copy
+
             executor.submit(add_del_extrafanart_copy("del"))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2004,6 +2044,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_add_all_theme_videos_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.base.video import add_del_theme_videos
+
             executor.submit(add_del_theme_videos("add"))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2011,6 +2053,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_del_all_theme_videos_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.base.video import add_del_theme_videos
+
             executor.submit(add_del_theme_videos("del"))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2023,6 +2067,8 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_save_config_clicked()
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.tools.emby_actor_info import update_emby_actor_info
+
             executor.submit(update_emby_actor_info())
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2032,6 +2078,8 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_save_config_clicked()
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.tools.emby_actor_image import update_emby_actor_photo
+
             executor.submit(update_emby_actor_photo())
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2041,6 +2089,8 @@ class MyMAinWindow(QMainWindow):
         self.pushButton_save_config_clicked()
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.tools.emby_actor_info import creat_kodi_actors
+
             executor.submit(creat_kodi_actors(True))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2049,6 +2099,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_del_actor_folder_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.tools.emby_actor_info import creat_kodi_actors
+
             executor.submit(creat_kodi_actors(False))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2057,6 +2109,8 @@ class MyMAinWindow(QMainWindow):
     def pushButton_show_pic_actor_clicked(self):
         self.pushButton_show_log_clicked()  # 点按钮后跳转到日志页面
         try:
+            from mdcx.tools.emby_actor_info import show_emby_actor_list
+
             executor.submit(show_emby_actor_list(self.Ui.comboBox_pic_actor.currentIndex()))
         except Exception:
             signal_qt.show_log_text(traceback.format_exc())
@@ -2228,6 +2282,8 @@ class MyMAinWindow(QMainWindow):
     def network_check(self):
         start_time = time.time()
         try:
+            from mdcx.base.web import check_theporndb_api_token, ping_host
+
             # 显示代理信息
             signal_qt.show_net_info("\n⛑ 开始检测网络....")
             show_netstatus()
@@ -2775,6 +2831,8 @@ class MyMAinWindow(QMainWindow):
                 signal_qt.show_log_text(
                     " ⏰ 上次刮削时间: " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(Flags.scrape_start_time))
                 )
+            from mdcx.core.scraper import start_new_scrape
+
             start_new_scrape(FileMode.Default)
 
     def auto_start(self):

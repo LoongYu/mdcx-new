@@ -168,6 +168,7 @@ async def _add_to_pic(pic_path: Path, img_pic: Image.Image, mark_size: int, coun
 
 
 async def add_mark_thread(pic_path: Path, mark_list: list[str]):
+    resources.ensure_mark_icons()
     mark_size = manager.config.mark_size
     mark_fixed = manager.config.mark_fixed
     mark_pos = manager.config.mark_pos
