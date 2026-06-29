@@ -1324,7 +1324,8 @@ class MyMAinWindow(QMainWindow):
             actor_text = clean_list(self.Ui.lineEdit_nfo_actor.text().replace("，", ","))
             if NfoInclude.ACTOR_ALL in manager.config.nfo_include_new:
                 json_data.all_actor = actor_text
-            json_data.actor = actor_text
+            else:
+                json_data.actor = actor_text
             json_data.year = self.Ui.lineEdit_nfo_year.text()
             json_data.title = self.Ui.lineEdit_nfo_title.text()
             json_data.originaltitle = self.Ui.lineEdit_nfo_originaltitle.text()
