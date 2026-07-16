@@ -1,6 +1,6 @@
 import re
 from typing import override
-from urllib.parse import urljoin
+from urllib.parse import quote, urljoin
 
 from parsel import Selector
 
@@ -10,16 +10,26 @@ from ..models.types import CrawlerResult
 from .base import BaseCrawler, CralwerException, CrawlerData, DetailPageParser, extract_all_texts, extract_text
 
 
+def has_class(class_name: str) -> str:
+    return f'contains(concat(" ", normalize-space(@class), " "), " {class_name} ")'
+
+
 class Parser(DetailPageParser):
     async def number(self, ctx, html: Selector) -> str:
-        result = extract_text(html, '//a[@class="button is-white copy-to-clipboard"]/@data-clipboard-text')
+        result = extract_text(html, f"//a[{has_class('copy-to-clipboard')}]/@data-clipboard-text")
         return result or ctx.input.number
 
     async def title(self, ctx, html: Selector) -> str:
-        return extract_text(html, 'string(//h2[@class="title is-4"]/strong[@class="current-title"])')
+        return extract_text(
+            html,
+            f"string(//h2[{has_class('title')} and {has_class('is-4')}]/strong[{has_class('current-title')}])",
+        )
 
     async def originaltitle(self, ctx, html: Selector) -> str:
-        return extract_text(html, 'string(//h2[@class="title is-4"]/span[@class="origin-title"])')
+        return extract_text(
+            html,
+            f"string(//h2[{has_class('title')} and {has_class('is-4')}]/span[{has_class('origin-title')}])",
+        )
 
     async def actors(self, ctx, html: Selector) -> list[str]:
         # parsel css 不支持 :has() 中的多个选择器, 这是一个已知问题: https://github.com/scrapy/cssselect/issues/138
@@ -86,10 +96,13 @@ class Parser(DetailPageParser):
         return list(dict.fromkeys(tags))
 
     async def thumb(self, ctx, html: Selector) -> str:
-        return extract_text(html, "//img[@class='video-cover']/@src")
+        return extract_text(html, f"//img[{has_class('video-cover')}]/@src")
 
     async def extrafanart(self, ctx, html: Selector) -> list[str]:
-        return extract_all_texts(html, "//div[@class='tile-images preview-images']/a[@class='tile-item']/@href")
+        return extract_all_texts(
+            html,
+            f"//div[{has_class('tile-images')} and {has_class('preview-images')}]//a[{has_class('tile-item')}]/@href",
+        )
 
     async def trailer(self, ctx, html: Selector) -> str:
         return extract_text(html, "//video[@id='preview-video']/source/@src")
@@ -102,7 +115,7 @@ class Parser(DetailPageParser):
         )
 
     async def score(self, ctx, html: Selector) -> str:
-        result = extract_text(html, "//span[@class='score-stars']/../text()")
+        result = extract_text(html, f"string(//span[{has_class('score-stars')}]/..)")
         try:
             score_match = re.search(r"(\d{1}\.\d+)(分|,)", result)
             return score_match.group(1) if score_match else ""
@@ -136,12 +149,31 @@ class JavdbCrawler(BaseCrawler):
 
     @override
     def _get_headers(self, ctx) -> dict[str, str] | None:
-        if manager.config.javdb:
-            return {"cookie": manager.config.javdb}
+        return {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/126.0.0.0 Safari/537.36"
+            ),
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-TW,zh;q=0.9,en;q=0.8",
+            "Referer": f"{self.base_url}/",
+        }
 
     @override
-    async def _generate_search_url(self, ctx) -> list[str]:
-        number = ctx.input.number.strip()
+    def _get_cookies(self, ctx) -> dict[str, str] | None:
+        cookies = {"over18": "1", "locale": "zh"}
+        if manager.config.javdb:
+            for item in manager.config.javdb.split(";"):
+                if "=" not in item:
+                    continue
+                key, value = item.strip().split("=", 1)
+                if key:
+                    cookies[key] = value
+        return cookies
+
+    def _normalize_number(self, number: str) -> str:
+        number = number.strip()
 
         # 处理日期格式的番号
         if "." in number:
@@ -150,14 +182,22 @@ class JavdbCrawler(BaseCrawler):
                 old_date = old_date[0]
                 new_date = "20" + old_date
                 number = number.replace(old_date, new_date)
+        return number
 
-        search_url = f"{self.base_url}/search?q={number}&locale=zh"
+    @override
+    async def _generate_search_url(self, ctx) -> list[str]:
+        number = self._normalize_number(ctx.input.number)
+        search_url = f"{self.base_url}/search?q={quote(number)}&locale=zh"
         ctx.debug(f"搜索地址: {search_url}")
         return [search_url]
 
     @override
     async def _parse_search_page(self, ctx, html: Selector, search_url: str) -> list[str] | None:
         html_text = html._text or ""
+        if "/over18" in html_text and "modal" in html_text:
+            raise CralwerException("搜索结果: JavDB 返回年龄确认页，请在设置中更新可用 Cookie 后重试！")
+        if "/login" in html_text and "video-title" not in html_text and "movie-list" not in html_text:
+            raise CralwerException("搜索结果: JavDB 返回登录页，请在设置中更新可用 Cookie 后重试！")
         if "The owner of this website has banned your access based on your browser's behaving" in html_text:
             raise CralwerException(f"由于请求过多，javdb网站暂时禁止了你当前IP的访问！！点击 {search_url} 查看详情！")
         if "Due to copyright restrictions" in html_text:
@@ -168,20 +208,20 @@ class JavdbCrawler(BaseCrawler):
             raise CralwerException("搜索结果: 被 Cloudflare 5 秒盾拦截！请尝试更换cookie！")
 
         # 获取搜索结果
-        res_list = html.xpath("//a[@class='box']")
+        res_list = html.xpath(f"//a[{has_class('box')}]")
         if not res_list:
             return None
 
         info_list = []
         for each in res_list:
             href = extract_text(each, "@href")
-            number_in_list = extract_text(each, "div[@class='video-title']/strong/text()")
+            number_in_list = extract_text(each, f".//div[{has_class('video-title')}]/strong/text()")
 
             if href and number_in_list:
                 info_list.append([href, number_in_list])
 
         # 精确匹配
-        number = ctx.input.number.upper()
+        number = self._normalize_number(ctx.input.number).upper()
         for href, number_in_list in info_list:
             if number == number_in_list.upper():
                 return [urljoin(self.base_url, href)]
@@ -197,11 +237,21 @@ class JavdbCrawler(BaseCrawler):
 
     @override
     async def _parse_detail_page(self, ctx, html: Selector, detail_url: str) -> CrawlerData | None:
+        html_text = html._text or ""
+        if "/over18" in html_text and "modal" in html_text:
+            raise CralwerException("详情页: JavDB 返回年龄确认页，请在设置中更新可用 Cookie 后重试！")
+        if "/login" in html_text and "current-title" not in html_text:
+            raise CralwerException("详情页: JavDB 返回登录页，请在设置中更新可用 Cookie 后重试！")
+
         # 提取 javdbid
         javdbid = ""
         if r := re.search(r"/v/([a-zA-Z0-9]+)", detail_url):
             javdbid = r.group(1)
-        return await self.parser.parse(ctx, html, external_id=javdbid)
+        data = await self.parser.parse(ctx, html, external_id=javdbid)
+        if not data.title and not data.number and not data.thumb:
+            page_title = extract_text(html, "string(//title)")
+            raise CralwerException(f"详情页未解析到有效数据，请检查 JavDB 页面结构或 Cookie。页面标题: {page_title}")
+        return data
 
     @override
     async def post_process(self, ctx, res: CrawlerResult) -> CrawlerResult:
